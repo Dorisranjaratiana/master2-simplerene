@@ -1,8 +1,9 @@
-# Framework AXΨL - Gouvernance Adaptative des Interfaces
+# Framework AXΨL — Pilotage adaptatif des interfaces
 
-Framework Low-Code pour la gouvernance native des interfaces adaptatives intelligentes.
+Framework Low-Code pour le pilotage natif des interfaces adaptatives intelligentes.
 
-## Chargement en une ligne (Pharo 13) 
+## Chargement en une ligne (Pharo 12)
+
 ```st
 Metacello new
     baseline: 'AXPL';
@@ -11,41 +12,45 @@ Metacello new
 ```
 
 ## Utilisation
+
 ```st
+"Domaine médical"
 SRFormApp new
     targetObject: ClientHopital new;
     open.
 ```
+
 ```st
+"Domaine académique"
 SRFormApp new
     targetObject: Etudiant new;
     open.
 ```
+
 ## Architecture
 
-Le framework intègre quatre dimensions :
-- **A** - Adaptation intelligente (AXPLFormBuilder)
-- **X** - Explicabilité native (SRDescription)
-- **Ψ** - Réflexivité actionnable (AXPLReflexivityEngine)
-- **L** - Accessibilité Low-Code (SRFormApp)
+Le framework intègre nativement quatre dimensions autour d'une méta-description unique :
+
+- **A** — Adaptation contextuelle (AXPLFormBuilder)
+- **X** — Explicabilité native (AXPLSpecVisitor)
+- **Ψ** — Réflexivité actionnable (AXPLReflexivityEngine)
+- **L** — Accessibilité Low-Code (SRFormApp)
 
 ## Packages
 
-- `AXPL-Descriptions` - Méta-description
-- `AXPL-Core` - Moteurs A et Ψ
-- `AXPL-UI` - Interface L
-- `AXPL-Tests` - 8 tests unitaires
+- `AXPL-Descriptions` — Méta-description (source unique de vérité)
+- `AXPL-Core` — Moteurs A et Ψ
+- `AXPL-UI` — Interface L
+- `AXPL-Tests` — 8 tests unitaires
 
 ## Licence
 
-MIT License - voir fichier LICENSE.
+MIT License — voir le fichier LICENSE.
 
 ## Inspirations
 
-La couche de méta-description est inspirée de 
-[SimpleRene](https://github.com/pharo-contributions/SimpleRene) 
-- Ducasse et al., MIT License.
+La couche de méta-description est inspirée de [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (Ducasse et al., MIT License), version épurée du paradigme Magritte (Renggli et al., 2007).
 
 ## Auteur
 
-RANJARATIANA Doris Michel - ENI Fianarantsoa - 2026
+RANJARATIANA Doris Michel — ENI Fianarantsoa — 2026
