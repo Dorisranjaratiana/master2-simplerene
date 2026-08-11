@@ -2,7 +2,7 @@
 
 Framework Low-Code pour le pilotage natif des interfaces adaptatives.
 
-## Chargement en une ligne (Pharo 12)
+## Chargement en une ligne (Pharo 13)
 
 ```st
 Metacello new
