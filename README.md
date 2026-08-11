@@ -1,6 +1,6 @@
 # Framework AXΨL — Pilotage adaptatif des interfaces
 
-Framework Low-Code pour le pilotage natif des interfaces adaptatives intelligentes.
+Framework Low-Code pour le pilotage natif des interfaces adaptatives.
 
 ## Chargement en une ligne (Pharo 12)
 
