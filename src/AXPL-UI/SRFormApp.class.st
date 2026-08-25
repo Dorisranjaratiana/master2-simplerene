@@ -253,25 +253,31 @@ SRFormApp >> runPsiEditField: aLabel [
             title: 'Ψ — Nouveau niveau pour "' , aLabel , '"'.
         (niveauChoix notNil and: [ niveauChoix > 0 ]) ifTrue: [
             nouveauNiveau := (niveaux at: niveauChoix) asSymbol.
-            psiEngine setLevel: nouveauNiveau ofDescription: aLabel.
-            self inform:
-                'Ψ appliqué : "' , aLabel
-                , '" → niveau #' , nouveauNiveau
-                , String cr
-                , 'Horodatage : ' , DateAndTime now printString.
-            self updateInterface ] ].
+            (UIManager default confirm:
+                'Changer le niveau de "' , aLabel , '" en #' , nouveauNiveau , ' ?')
+                ifTrue: [
+                    psiEngine setLevel: nouveauNiveau ofDescription: aLabel.
+                    self inform:
+                        'Ψ appliqué : "' , aLabel
+                        , '" → niveau #' , nouveauNiveau
+                        , String cr
+                        , 'Horodatage : ' , DateAndTime now printString.
+                    self updateInterface ] ] ].
     choix = 2 ifTrue: [
         | nouveauLabel |
         nouveauLabel := UIManager default
             request: 'Nouveau label pour "' , aLabel , '" :'
             initialAnswer: aLabel.
         (nouveauLabel notNil and: [ nouveauLabel notEmpty ]) ifTrue: [
-            psiEngine relabelDescription: aLabel to: nouveauLabel.
-            self inform:
-                'Ψ : "' , aLabel , '" → "' , nouveauLabel , '".'
-                , String cr
-                , 'Horodatage : ' , DateAndTime now printString.
-            self updateInterface ] ].
+            (UIManager default confirm:
+                'Renommer "' , aLabel , '" en "' , nouveauLabel , '" ?')
+                ifTrue: [
+                    psiEngine relabelDescription: aLabel to: nouveauLabel.
+                    self inform:
+                        'Ψ : "' , aLabel , '" → "' , nouveauLabel , '".'
+                        , String cr
+                        , 'Horodatage : ' , DateAndTime now printString.
+                    self updateInterface ] ] ].
 ]
 
 { #category : 'psi' }
@@ -289,6 +295,8 @@ SRFormApp >> runPsiMenu [
 { #category : 'psi' }
 SRFormApp >> runPsiRemoveField: aLabel [
     "⑥ Ψ retire un champ entier du metaContainer."
+    (UIManager default confirm: 'Supprimer le champ "' , aLabel , '" ?')
+        ifFalse: [ ^ self ].
     psiEngine removeField: aLabel.
     self inform:
         'Ψ : champ "' , aLabel , '" supprimé.'
