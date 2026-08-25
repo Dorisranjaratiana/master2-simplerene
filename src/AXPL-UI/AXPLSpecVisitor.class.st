@@ -50,7 +50,7 @@ AXPLSpecVisitor >> visit: aCollection [
     | mainLayout |
     mainLayout := SpBoxLayout newVertical spacing: 8.
     aCollection do: [ :desc |
-        mainLayout add: (desc acceptSimpleReneVisitor: self) expand: false ].
+        mainLayout add: (desc acceptAXPLVisitor: self) expand: false ].
     ^ mainLayout
 ]
 
@@ -132,8 +132,8 @@ AXPLSpecVisitor >> visitPriorityContainer: aContainer [
 	| vLayout |
 	vLayout := SpBoxLayout newVertical.
 	vLayout spacing: 10.
-	aContainer children do: [ :each | 
-		vLayout add: (each acceptSimpleReneVisitor: self) expand: false ].
+	aContainer children do: [ :each |
+		vLayout add: (each acceptAXPLVisitor: self) expand: false ].
 	^ vLayout
 ]
 

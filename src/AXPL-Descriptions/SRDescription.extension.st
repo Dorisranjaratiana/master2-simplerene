@@ -1,6 +1,16 @@
 Extension { #name : 'SRDescription' }
 
 { #category : '*AXPL-Descriptions' }
+SRDescription >> acceptAXPLVisitor: aVisitor [
+	"Protocole de double-dispatch propre à AXPL : contrairement à
+	#acceptSimpleReneVisitor: (natif, sans ^, pensé pour des visiteurs à
+	effet de bord), celui-ci renvoie le résultat du visiteur — nécessaire
+	pour qu'AXPLSpecVisitor puisse construire et retourner un widget."
+
+	^ aVisitor visitDescription: self
+]
+
+{ #category : '*AXPL-Descriptions' }
 SRDescription >> commentFor: aLevel [
 	"② Explicabilité (X) : le vrai SRDescription>>#comment stocke soit une
 	String simple, soit un Dictionary #simple/#base/#expert (posé par AXPL).
