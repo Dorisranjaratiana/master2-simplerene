@@ -18,7 +18,10 @@ BaselineOfAXPL >> baseline: spec [
         pour la reproductibilité du build."
         spec
             baseline: 'SimpleRene'
-            with: [ spec repository: 'github://pharo-contributions/SimpleRene:de059fc2e3732594fc6e0320e25c966b58a7ba64/src' ].
+            with: [
+                spec
+                    repository: 'github://pharo-contributions/SimpleRene:de059fc2e3732594fc6e0320e25c966b58a7ba64/src';
+                    loads: #( Core ) ].
 
         "Packages du projet dans l'ordre de dépendance.
         AXPL-UI (Spec2) et AXPL-Json (export JSON) sont deux implémentations
