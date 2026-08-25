@@ -66,9 +66,9 @@ AXPLSpecVisitor >> visitBooleanDescription: aDesc [
     "CORRECTION : On passe la String extraite, pas le dictionnaire"
     checkbox help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
     
-    checkbox state: (targetObject perform: aDesc accessor).
-    checkbox whenActivatedDo: [ targetObject perform: aDesc accessor asMutator with: true ].
-    checkbox whenDeactivatedDo: [ targetObject perform: aDesc accessor asMutator with: false ].
+    checkbox state: (aDesc read: targetObject).
+    checkbox whenActivatedDo: [ aDesc write: true to: targetObject ].
+    checkbox whenDeactivatedDo: [ aDesc write: false to: targetObject ].
 
     ^ checkbox
 ]
@@ -92,7 +92,7 @@ AXPLSpecVisitor >> visitDateDescription: aDescription [
     explicabilityText := aDescription commentFor: currentLevel.
 
     input := SpDatePresenter new.
-    dateValue := targetObject perform: aDescription accessor.
+    dateValue := aDescription read: targetObject.
     input date: (dateValue ifNil: [ Date today ] ifNotNil: [ dateValue ]).
 
     label := presenter newLabel label: aDescription label.
@@ -115,11 +115,11 @@ AXPLSpecVisitor >> visitNumberDescription: aDescription [
     explicabilityText := aDescription commentFor: currentLevel.
 
     input := presenter newNumberInput.
-    numValue := targetObject perform: aDescription accessor.
+    numValue := aDescription read: targetObject.
     input number: (numValue ifNil: [ 0 ]).
-    
-    input whenNumberChangedDo: [ :num | 
-        targetObject perform: aDescription accessor asMutator with: num ].
+
+    input whenNumberChangedDo: [ :num |
+        aDescription write: num to: targetObject ].
 
     label := presenter newLabel label: aDescription label.
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
@@ -138,9 +138,9 @@ AXPLSpecVisitor >> visitPriorityContainer: aContainer [
 ]
 
 { #category : 'visiting' }
-AXPLSpecVisitor >> visitSelectionDescription: aDesc [
+AXPLSpecVisitor >> visitSingleOptionDescription: aDesc [
     | drop row label currentLevel explicabilityText |
-    
+
     currentLevel := presenter levelDropList selectedItem.
     explicabilityText := aDesc commentFor: currentLevel.
 
@@ -149,9 +149,9 @@ AXPLSpecVisitor >> visitSelectionDescription: aDesc [
 
     drop := presenter newDropList.
     drop items: aDesc options.
-    drop selectItem: (targetObject perform: aDesc accessor).
-    drop whenSelectedItemChangedDo: [ :item | 
-        targetObject perform: aDesc accessor asMutator with: item ].
+    drop selectItem: (aDesc read: targetObject).
+    drop whenSelectedItemChangedDo: [ :item |
+        aDesc write: item to: targetObject ].
 
     row := SpBoxLayout newHorizontal spacing: 15.
     row add: label width: 140.
@@ -170,10 +170,10 @@ AXPLSpecVisitor >> visitStringDescription: aDesc [
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
 
     input := presenter newTextInput.
-    value := targetObject perform: aDesc accessor.
+    value := aDesc read: targetObject.
     input text: (value ifNil: [ '' ] ifNotNil: [ value asString ]).
-    input whenTextChangedDo: [ :txt | 
-        targetObject perform: aDesc accessor asMutator with: txt ].
+    input whenTextChangedDo: [ :txt |
+        aDesc write: txt to: targetObject ].
 
     row := SpBoxLayout newHorizontal spacing: 15.
     row add: label width: 140.

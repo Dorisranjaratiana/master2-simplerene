@@ -74,11 +74,11 @@ AXPLReflexivityEngine >> updateExplanation: aLabel forLevel: aLevel with: aText 
     | desc raw |
     desc := self readDescription: aLabel.
     desc ifNotNil: [
-        raw := desc rawComment.
+        raw := desc comment.
         (raw isKindOf: Dictionary)
             ifTrue: [ raw at: aLevel put: aText ]
             ifFalse: [
-                desc rawComment: (Dictionary new
+                desc comment: (Dictionary new
                     at: aLevel put: aText;
                     yourself) ] ]
 ]
