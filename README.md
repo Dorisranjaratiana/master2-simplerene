@@ -7,7 +7,7 @@ Framework Low-Code pour le pilotage natif des interfaces adaptatives.
 ```st
 Metacello new
     baseline: 'AXPL';
-    repository: 'github://Dorisranjaratiana/master2:master/src';
+    repository: 'github://Dorisranjaratiana/master2-simplerene:integration-simplerene/src';
     load.
 ```
 
@@ -38,18 +38,18 @@ Le framework intègre nativement quatre dimensions autour d'une méta-descriptio
 
 ## Packages
 
-- `AXPL-Descriptions` — Méta-description (source unique de vérité)
+- `AXPL-Descriptions` — Extension du vrai [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (niveau #simple/#base/#expert, explicabilité graduée)
 - `AXPL-Core` — Moteurs A et Ψ
 - `AXPL-UI` — Interface L
 - `AXPL-Tests` — 8 tests unitaires
 
+## Dépendance
+
+AXPL **dépend réellement** de [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (Ducasse et al., MIT License), déclaré comme projet externe dans `BaselineOfAXPL`. Le package `AXPL-Descriptions` n'y ajoute que ce que SimpleRene n'a pas nativement — les propriétés `level`/`level:` et `commentFor:` (explicabilité graduée par niveau) — via des méthodes d'extension sur `SRDescription`, plutôt qu'en dupliquant sa hiérarchie de classes.
+
 ## Licence
 
 MIT License — voir le fichier LICENSE.
-
-## Inspirations
-
-La couche de méta-description est inspirée de [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (Ducasse et al., MIT License), version épurée du paradigme Magritte (Renggli et al., 2007).
 
 ## Auteur
 

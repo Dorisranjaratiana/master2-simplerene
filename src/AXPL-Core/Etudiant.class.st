@@ -36,9 +36,10 @@ Etudiant class >> descriptionForAXPL [
 	container := SRPriorityContainer new label: 'Dossier Académique AXPL'.
 	
 	"--- NIVEAU SIMPLE : Identité et Cursus ---"
-	container add: (SRStringDescription new 
-		label: 'Nom'; 
-		accessor: #nom; 
+	container add: (SRStringDescription new
+		label: 'Nom';
+		accessor: #nom;
+		priority: 10;
 		level: #simple;
 		comment: (Dictionary new 
 			at: #simple put: 'Votre nom de famille officiel.';
@@ -46,9 +47,10 @@ Etudiant class >> descriptionForAXPL [
 			at: #expert put: 'Clé d''indexation pour la synchronisation des bases nationales.';
 			yourself)).
 
-	container add: (SRStringDescription new 
-		label: 'Prénom'; 
-		accessor: #prenom; 
+	container add: (SRStringDescription new
+		label: 'Prénom';
+		accessor: #prenom;
+		priority: 20;
 		level: #simple;
 		comment: (Dictionary new 
 			at: #simple put: 'Votre prénom usuel.';
@@ -56,9 +58,10 @@ Etudiant class >> descriptionForAXPL [
 			at: #expert put: 'Attribut de désambiguïsation pour la gestion des homonymes.';
 			yourself)).
 
-	container add: (SRStringDescription new 
-		label: 'Matricule'; 
-		accessor: #matricule; 
+	container add: (SRStringDescription new
+		label: 'Matricule';
+		accessor: #matricule;
+		priority: 30;
 		level: #simple;
 		comment: (Dictionary new 
 			at: #simple put: 'Votre numéro d''étudiant unique.';
@@ -66,10 +69,11 @@ Etudiant class >> descriptionForAXPL [
 			at: #expert put: 'Clé primaire liant le dossier pédagogique et financier.';
 			yourself)).
 
-	container add: (SRSelectionDescription new 
-		label: 'Filière'; 
-		accessor: #filiere; 
+	container add: (SRSingleOptionDescription new
+		label: 'Filière';
+		accessor: #filiere;
 		options: #('Informatique' 'Médecine' 'Droit' 'Arts');
+		priority: 40;
 		level: #simple;
 		comment: (Dictionary new 
 			at: #simple put: 'Votre domaine d''études principal.';
@@ -78,9 +82,10 @@ Etudiant class >> descriptionForAXPL [
 			yourself)).
 
 	"--- NIVEAU BASE : Suivi et Contact ---"
-	container add: (SRNumberDescription new 
-		label: 'Moyenne'; 
-		accessor: #moyenne; 
+	container add: (SRNumberDescription new
+		label: 'Moyenne';
+		accessor: #moyenne;
+		priority: 50;
 		level: #base;
 		comment: (Dictionary new 
 			at: #simple put: 'Votre résultat global actuel.';
@@ -88,18 +93,20 @@ Etudiant class >> descriptionForAXPL [
 			at: #expert put: 'Variable quantitative pour le calcul du classement et des mentions.';
 			yourself)).
 
-	container add: (SRDateDescription new 
-		label: 'Date Naissance'; 
-		accessor: #dateNaissance; 
+	container add: (SRDateDescription new
+		label: 'Date Naissance';
+		accessor: #dateNaissance;
+		priority: 60;
 		level: #base;
 		comment: (Dictionary new 
 			at: #base   put: 'Votre date de naissance officielle.';
 			at: #expert put: 'Vérification de l''âge légal pour les droits sociaux et assurances.';
 			yourself)).
 
-	container add: (SRStringDescription new 
-		label: 'E-mail'; 
-		accessor: #email; 
+	container add: (SRStringDescription new
+		label: 'E-mail';
+		accessor: #email;
+		priority: 70;
 		level: #base;
 		comment: (Dictionary new 
 			at: #simple put: 'Votre adresse de contact universitaire.';
@@ -107,9 +114,10 @@ Etudiant class >> descriptionForAXPL [
 			at: #expert put: 'Identifiant de sécurité pour l''authentification SSO.';
 			yourself)).
 
-	container add: (SRBooleanDescription new 
-		label: 'Boursier'; 
-		accessor: #boursier; 
+	container add: (SRBooleanDescription new
+		label: 'Boursier';
+		accessor: #boursier;
+		priority: 80;
 		level: #base;
 		comment: (Dictionary new 
 			at: #simple put: 'Indique si vous bénéficiez d''une aide financière.';
@@ -118,36 +126,40 @@ Etudiant class >> descriptionForAXPL [
 			yourself)).
 
 	"--- NIVEAU EXPERT : Administration et Jury ---"
-	container add: (SRNumberDescription new 
-		label: 'Montant Bourse'; 
-		accessor: #montantBourse; 
+	container add: (SRNumberDescription new
+		label: 'Montant Bourse';
+		accessor: #montantBourse;
+		priority: 90;
 		level: #expert;
 		comment: (Dictionary new 
 			at: #base   put: 'Somme allouée pour l''année universitaire.';
 			at: #expert put: 'Variable budgétaire soumise à vérification d''assiduité.';
 			yourself)).
 
-	container add: (SRStringDescription new 
-		label: 'Remarques'; 
-		accessor: #remarques; 
+	container add: (SRStringDescription new
+		label: 'Remarques';
+		accessor: #remarques;
+		priority: 100;
 		level: #expert;
 		comment: (Dictionary new 
 			at: #base   put: 'Commentaires du corps enseignant.';
 			at: #expert put: 'Évaluations qualitatives confidentielles du jury de délibération.';
 			yourself)).
 
-	container add: (SRBooleanDescription new 
-		label: 'Éligible Diplôme'; 
-		accessor: #estDiplomable; 
+	container add: (SRBooleanDescription new
+		label: 'Éligible Diplôme';
+		accessor: #estDiplomable;
+		priority: 110;
 		level: #expert;
 		comment: (Dictionary new 
 			at: #base   put: 'Vérification des crédits ECTS requis.';
 			at: #expert put: 'État logique final validant la fin du cycle universitaire.';
 			yourself)).
 
-	container add: (SRStringDescription new 
-		label: 'Adresse'; 
-		accessor: #adresse; 
+	container add: (SRStringDescription new
+		label: 'Adresse';
+		accessor: #adresse;
+		priority: 120;
 		level: #expert;
 		comment: (Dictionary new 
 			at: #base   put: 'Votre lieu de résidence actuel.';
