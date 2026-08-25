@@ -25,7 +25,8 @@ Class {
 		'traitement',
 		'medecinReferent',
 		'statutSortie',
-		'contactUrgence'
+		'contactUrgence',
+		'properties'
 	],
 	#category : 'AXPL-Core',
 	#package : 'AXPL-Core'
@@ -367,6 +368,14 @@ ClientHopital >> numeroChambre [
 ClientHopital >> numeroChambre: anObject [
 
 	numeroChambre := anObject
+]
+
+{ #category : 'accessing' }
+ClientHopital >> properties [
+	"Dictionnaire des champs créés dynamiquement par Ψ (⑥) : ne porte
+	aucune variable d'instance dédiée, contrairement aux champs déclarés
+	dans descriptionForAXPL."
+	^ properties ifNil: [ properties := Dictionary new ]
 ]
 
 { #category : 'accessing' }

@@ -26,6 +26,33 @@ AXPLTest >> setUp [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testCreationChampSelectionPsi [
+    "⑥ — Ψ peut créer un champ à choix (SRSingleOptionDescription)"
+    | desc |
+    desc := engine createSelectionField: 'Groupe sanguin' options: #('A' 'B' 'AB' 'O') level: #base.
+    self assert: desc options equals: #('A' 'B' 'AB' 'O').
+    self assert: (container children includes: desc).
+]
+
+{ #category : 'tests' }
+AXPLTest >> testCreationEtSuppressionChampPsi [
+    "⑥ — Ψ peut créer un champ entièrement nouveau, l'utiliser, puis le retirer"
+    | desc |
+    desc := engine createField: 'Note interne' type: SRStringDescription level: #expert.
+    self assert: (engine readDescription: 'Note interne') notNil.
+    self assert: desc level equals: #expert.
+
+    "Le champ créé n'a pas de variable d'instance dédiée : sa valeur vit
+    dans #properties, accessible via l'accessor de la description."
+    desc write: 'Suivi attentif' to: client.
+    self assert: (desc read: client) equals: 'Suivi attentif'.
+
+    engine removeField: 'Note interne'.
+    self assert: (engine readDescription: 'Note interne') isNil.
+    self deny: (container children includes: desc).
+]
+
+{ #category : 'tests' }
 AXPLTest >> testExplicationContextuelle [
     "② — Chaque champ porte une explication String selon le niveau"
     | desc |

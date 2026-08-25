@@ -4,7 +4,8 @@ Slots principaux :
   - metaContainer : source unique de vérité, initialisé une seule fois dans targetObject:
   - psiEngine : moteur Ψ, initialisé une seule fois, garde les modifications en mémoire
   - levelDropList : sélection du niveau utilisateur (⑨)
-  - psiButton : bouton Ψ visible seulement en mode Expert
+  - psiButton : bouton Ψ visible seulement en mode Expert — ouvre runPsiMenu
+    (créer ⑥ / modifier ④⑨ / supprimer ⑥ un champ)
   - traceButton : affiche le log horodaté [t] en mode Expert
 updateInterface : méthode centrale qui orchestre ①②⑦⑧⑨⑩.
 targetObject: : point d'entrée — initialise metaContainer et psiEngine puis déclenche le rendu.""
@@ -193,6 +194,122 @@ SRFormApp >> resetInterface [
     self update.
 ]
 
+{ #category : 'psi' }
+SRFormApp >> runPsiCreateField [
+    "⑥ Ψ crée un champ entièrement nouveau dans le metaContainer, adossé
+    au dictionnaire #properties de targetObject plutôt qu'à une variable
+    d'instance."
+    | types typeChoix label niveaux niveauChoix niveau typeClasses |
+    types := #( 'Texte' 'Nombre' 'Booléen' 'Date' 'Choix' ).
+    typeChoix := UIManager default
+        chooseFrom: types
+        title: 'Ψ — Type du nouveau champ'.
+    (typeChoix isNil or: [ typeChoix = 0 ]) ifTrue: [ ^ self ].
+
+    label := UIManager default
+        request: 'Ψ — Label du nouveau champ :'
+        initialAnswer: ''.
+    (label isNil or: [ label isEmpty ]) ifTrue: [ ^ self ].
+
+    niveaux := #( 'simple' 'base' 'expert' ).
+    niveauChoix := UIManager default
+        chooseFrom: niveaux
+        title: 'Ψ — Niveau du nouveau champ "' , label , '"'.
+    (niveauChoix isNil or: [ niveauChoix = 0 ]) ifTrue: [ ^ self ].
+    niveau := (niveaux at: niveauChoix) asSymbol.
+
+    typeChoix = 5
+        ifTrue: [
+            | optionsText options |
+            optionsText := UIManager default
+                request: 'Ψ — Options séparées par des virgules :'
+                initialAnswer: ''.
+            (optionsText isNil or: [ optionsText isEmpty ]) ifTrue: [ ^ self ].
+            options := ((optionsText tokenize: ',') collect: [ :each | each trimSeparators ]) asArray.
+            psiEngine createSelectionField: label options: options level: niveau ]
+        ifFalse: [
+            typeClasses := { SRStringDescription. SRNumberDescription. SRBooleanDescription. SRDateDescription }.
+            psiEngine createField: label type: (typeClasses at: typeChoix) level: niveau ].
+
+    self inform:
+        'Ψ : champ "' , label , '" créé.'
+        , String cr
+        , 'Horodatage : ' , DateAndTime now printString.
+    self updateInterface.
+]
+
+{ #category : 'psi' }
+SRFormApp >> runPsiEditField: aLabel [
+    "④⑨ Ψ change le niveau ou renomme un champ existant."
+    | choix |
+    choix := UIManager default
+        chooseFrom: #( 'Changer le niveau' 'Modifier le label' )
+        title: 'Ψ — Que voulez-vous modifier sur "' , aLabel , '" ?'.
+    choix = 1 ifTrue: [
+        | niveauChoix niveaux nouveauNiveau |
+        niveaux := #( 'simple' 'base' 'expert' ).
+        niveauChoix := UIManager default
+            chooseFrom: niveaux
+            title: 'Ψ — Nouveau niveau pour "' , aLabel , '"'.
+        (niveauChoix notNil and: [ niveauChoix > 0 ]) ifTrue: [
+            nouveauNiveau := (niveaux at: niveauChoix) asSymbol.
+            psiEngine setLevel: nouveauNiveau ofDescription: aLabel.
+            self inform:
+                'Ψ appliqué : "' , aLabel
+                , '" → niveau #' , nouveauNiveau
+                , String cr
+                , 'Horodatage : ' , DateAndTime now printString.
+            self updateInterface ] ].
+    choix = 2 ifTrue: [
+        | nouveauLabel |
+        nouveauLabel := UIManager default
+            request: 'Nouveau label pour "' , aLabel , '" :'
+            initialAnswer: aLabel.
+        (nouveauLabel notNil and: [ nouveauLabel notEmpty ]) ifTrue: [
+            psiEngine relabelDescription: aLabel to: nouveauLabel.
+            self inform:
+                'Ψ : "' , aLabel , '" → "' , nouveauLabel , '".'
+                , String cr
+                , 'Horodatage : ' , DateAndTime now printString.
+            self updateInterface ] ].
+]
+
+{ #category : 'psi' }
+SRFormApp >> runPsiMenu [
+    "Point d'entrée du bouton Ψ : créer, modifier ou supprimer un champ."
+    | action |
+    action := UIManager default
+        chooseFrom: #( 'Créer un champ' 'Modifier un champ existant' 'Supprimer un champ' )
+        title: 'Ψ — Que voulez-vous faire ?'.
+    action = 1 ifTrue: [ ^ self runPsiCreateField ].
+    action = 2 ifTrue: [ ^ self runPsiSelectFieldThenDo: [ :label | self runPsiEditField: label ] ].
+    action = 3 ifTrue: [ ^ self runPsiSelectFieldThenDo: [ :label | self runPsiRemoveField: label ] ].
+]
+
+{ #category : 'psi' }
+SRFormApp >> runPsiRemoveField: aLabel [
+    "⑥ Ψ retire un champ entier du metaContainer."
+    psiEngine removeField: aLabel.
+    self inform:
+        'Ψ : champ "' , aLabel , '" supprimé.'
+        , String cr
+        , 'Horodatage : ' , DateAndTime now printString.
+    self updateInterface.
+]
+
+{ #category : 'psi' }
+SRFormApp >> runPsiSelectFieldThenDo: aBlock [
+    "Demande à l'utilisateur de choisir un champ existant, puis exécute
+    aBlock avec son label. Ne fait rien si l'utilisateur annule."
+    | currentLabels index |
+    currentLabels := metaContainer children collect: [ :d | d label ].
+    index := UIManager default
+        chooseFrom: currentLabels
+        title: 'Ψ — Choisir le champ'.
+    (index notNil and: [ index > 0 ])
+        ifTrue: [ aBlock value: (currentLabels at: index) ].
+]
+
 { #category : 'accessing' }
 SRFormApp >> showTrace [
     | log text |
@@ -267,45 +384,7 @@ SRFormApp >> updateInterface [
             psiButton
                 label: 'Ψ — Réflexivité';
                 enabled: true;
-                action: [
-                    | index ancienLabel currentLabels choix |
-                    currentLabels := metaContainer children
-                        collect: [ :d | d label ].
-                    index := UIManager default
-                        chooseFrom: currentLabels
-                        title: 'Ψ — Choisir le champ à modifier'.
-                    (index notNil and: [ index > 0 ]) ifTrue: [
-                        ancienLabel := currentLabels at: index.
-                        choix := UIManager default
-                            chooseFrom: #( 'Changer le niveau' 'Modifier' )
-                            title: 'Ψ — Que voulez-vous modifier ?'.
-                        choix = 1 ifTrue: [
-                            | niveauChoix niveaux nouveauNiveau |
-                            niveaux := #( 'simple' 'base' 'expert' ).
-                            niveauChoix := UIManager default
-                                chooseFrom: niveaux
-                                title: 'Ψ — Nouveau niveau pour "' , ancienLabel , '"'.
-                            (niveauChoix notNil and: [ niveauChoix > 0 ]) ifTrue: [
-                                nouveauNiveau := (niveaux at: niveauChoix) asSymbol.
-                                psiEngine setLevel: nouveauNiveau ofDescription: ancienLabel.
-                                self inform:
-                                    'Ψ appliqué : "' , ancienLabel
-                                    , '" → niveau #' , nouveauNiveau
-                                    , String cr
-                                    , 'Horodatage : ' , DateAndTime now printString.
-                                self updateInterface ] ].
-                        choix = 2 ifTrue: [
-                            | nouveauLabel |
-                            nouveauLabel := UIManager default
-                                request: 'Nouveau label pour "' , ancienLabel , '" :'
-                                initialAnswer: ancienLabel.
-                            (nouveauLabel notNil and: [ nouveauLabel notEmpty ]) ifTrue: [
-                                psiEngine relabelDescription: ancienLabel to: nouveauLabel.
-                                self inform:
-                                    'Ψ : "' , ancienLabel , '" → "' , nouveauLabel , '".'
-                                    , String cr
-                                    , 'Horodatage : ' , DateAndTime now printString.
-                                self updateInterface ] ] ] ] ]
+                action: [ self runPsiMenu ] ]
         ifFalse: [
             traceButton visible: false.
             psiButton

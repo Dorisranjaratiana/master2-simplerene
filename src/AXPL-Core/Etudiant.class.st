@@ -16,7 +16,8 @@ Class {
 		'boursier',
 		'montantBourse',
 		'remarques',
-		'estDiplomable'
+		'estDiplomable',
+		'properties'
 	],
 	#category : 'AXPL-Core',
 	#package : 'AXPL-Core'
@@ -234,6 +235,12 @@ Etudiant >> montantBourse [ ^ montantBourse
 
 { #category : 'accessing' }
 Etudiant >> montantBourse: anObject [ montantBourse := anObject
+]
+
+{ #category : 'accessing' }
+Etudiant >> properties [
+	"Dictionnaire des champs créés dynamiquement par Ψ (⑥)."
+	^ properties ifNil: [ properties := Dictionary new ]
 ]
 
 { #category : 'accessing' }
