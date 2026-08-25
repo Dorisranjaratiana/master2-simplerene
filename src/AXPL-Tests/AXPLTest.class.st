@@ -187,3 +187,32 @@ AXPLTest >> testTracabilite [
 	 self assert: (engine traceLog first key isKindOf: DateAndTime).
 	 self assert: (engine traceLog first value includesSubstring: 'Nom')
 ]
+
+{ #category : 'tests' }
+AXPLTest >> testValidationAgePositif [
+    "beRequired + bePositive sur 'Âge' (ClientHopital)"
+    | desc |
+    desc := container children detect: [ :d | d label = 'Âge' ].
+    self deny: (desc isSatisfiedBy: -5).
+    self assert: (desc isSatisfiedBy: 42).
+]
+
+{ #category : 'tests' }
+AXPLTest >> testValidationChampRequis [
+    "beRequired sur 'Nom' (ClientHopital) : refuse nil, accepte une String"
+    | desc |
+    desc := container children detect: [ :d | d label = 'Nom' ].
+    self deny: (desc isSatisfiedBy: nil).
+    self assert: (desc isSatisfiedBy: 'Doris').
+]
+
+{ #category : 'tests' }
+AXPLTest >> testValidationMoyenneEtudiant [
+    "Condition personnalisée sur 'Moyenne' (Etudiant) : bornée entre 0 et 20"
+    | etudiant etudiantContainer desc |
+    etudiant := Etudiant new.
+    etudiantContainer := etudiant class descriptionForAXPL.
+    desc := etudiantContainer children detect: [ :d | d label = 'Moyenne' ].
+    self deny: (desc isSatisfiedBy: 25).
+    self assert: (desc isSatisfiedBy: 15).
+]

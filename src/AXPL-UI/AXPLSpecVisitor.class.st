@@ -93,7 +93,8 @@ AXPLSpecVisitor >> visitNumberDescription: aDescription [
     input number: (numValue ifNil: [ 0 ]).
 
     input whenNumberChangedDo: [ :num |
-        aDescription write: num to: targetObject ].
+        (aDescription isSatisfiedBy: num)
+            ifTrue: [ aDescription write: num to: targetObject ] ].
 
     label := presenter newLabel label: aDescription label.
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
@@ -147,7 +148,8 @@ AXPLSpecVisitor >> visitStringDescription: aDesc [
     value := aDesc read: targetObject.
     input text: (value ifNil: [ '' ] ifNotNil: [ value asString ]).
     input whenTextChangedDo: [ :txt |
-        aDesc write: txt to: targetObject ].
+        (aDesc isSatisfiedBy: txt)
+            ifTrue: [ aDesc write: txt to: targetObject ] ].
 
     row := SpBoxLayout newHorizontal spacing: 15.
     row add: label width: 140.

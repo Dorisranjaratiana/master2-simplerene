@@ -44,7 +44,8 @@ ClientHopital class >> descriptionForAXPL [
 		accessor: #nom;
 		priority: 10;
 		level: #simple;
-		comment: (Dictionary new 
+		beRequired;
+		comment: (Dictionary new
 			at: #simple put: 'Votre nom de famille officiel.';
 			at: #base   put: 'Identifiant pivot pour la corrélation du dossier civil.';
 			at: #expert put: 'Clé primaire d''indexation pour l''unicité du dossier patient (RGPD).';
@@ -55,7 +56,8 @@ ClientHopital class >> descriptionForAXPL [
 		accessor: #prenom;
 		priority: 20;
 		level: #simple;
-		comment: (Dictionary new 
+		beRequired;
+		comment: (Dictionary new
 			at: #simple put: 'Votre prénom usuel.';
 			at: #base   put: 'Attribut d''unicité pour minimiser les risques d''homonymie.';
 			at: #expert put: 'Variable de désambiguïsation dans les protocoles d''identification.';
@@ -66,6 +68,8 @@ ClientHopital class >> descriptionForAXPL [
 		accessor: #age;
 		priority: 30;
 		level: #simple; "Passé en simple car essentiel à l'identité"
+		beRequired;
+		bePositive;
 		comment: (Dictionary new 
 			at: #simple put: 'Votre âge actuel.';
 			at: #base   put: 'Indicateur pour déclencher des alertes spécifiques (pédiatrie/gériatrie).';

@@ -34,6 +34,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #nom;
 		priority: 10;
 		level: #simple;
+		beRequired;
 		comment: (Dictionary new
 			at: #simple put: 'Votre nom de famille officiel.';
 			at: #base   put: 'Identifiant civil pour les registres universitaires.';
@@ -45,6 +46,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #prenom;
 		priority: 20;
 		level: #simple;
+		beRequired;
 		comment: (Dictionary new
 			at: #simple put: 'Votre prénom usuel.';
 			at: #base   put: 'Prénom utilisé pour la personnalisation des diplômes.';
@@ -56,6 +58,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #matricule;
 		priority: 30;
 		level: #simple;
+		beRequired;
 		comment: (Dictionary new
 			at: #simple put: 'Votre numéro d''étudiant unique.';
 			at: #base   put: 'Identifiant de session pour les examens et services numériques.';
@@ -80,6 +83,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #moyenne;
 		priority: 50;
 		level: #base;
+		addCondition: [ :v | v between: 0 and: 20 ] labelled: 'La moyenne doit être comprise entre 0 et 20.';
 		comment: (Dictionary new
 			at: #simple put: 'Votre résultat global actuel.';
 			at: #base   put: 'Indicateur de performance pour le suivi pédagogique.';

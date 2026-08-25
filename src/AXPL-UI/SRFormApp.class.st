@@ -120,7 +120,7 @@ SRFormApp >> initializePresenters [
         add: (self newButton
             label: 'Enregistrer';
             icon: (self iconNamed: #smallSave);
-            action: [ self inform: 'Enregistré !' ];
+            action: [ self save ];
             yourself) expand: true;
         yourself).
  actionBar visible: false.
@@ -184,6 +184,10 @@ SRFormApp >> psiEngine: anObject [
 
 { #category : 'initialization' }
 SRFormApp >> resetInterface [
+    "Annule aussi les saisies : targetObject est remplacé par une instance
+    fraîche, pas seulement le metaContainer (sinon les valeurs déjà tapées
+    restaient malgré le clic sur Annuler)."
+    targetObject := targetObject class new.
     metaContainer := targetObject class descriptionForAXPL.
     psiEngine := AXPLReflexivityEngine new
         metaContainer: metaContainer;
@@ -319,16 +323,38 @@ SRFormApp >> runPsiSelectFieldThenDo: aBlock [
         ifTrue: [ aBlock value: (currentLabels at: index) ].
 ]
 
+{ #category : 'updating' }
+SRFormApp >> save [
+    "Valide chaque champ du metaContainer (règles réelles de SimpleRene :
+    beRequired, bePositive, conditions personnalisées...) avant de confirmer
+    l'enregistrement. N'écrit rien de nouveau : les valeurs sont déjà sur
+    targetObject au fil de la saisie (cf. AXPLSpecVisitor), cette étape ne
+    fait que vérifier qu'elles sont toutes valides."
+    | invalides |
+    invalides := metaContainer children
+        reject: [ :d | d isSatisfiedBy: (d read: targetObject) ].
+    invalides isEmpty
+        ifTrue: [ self inform: 'Enregistré : toutes les valeurs sont valides.' ]
+        ifFalse: [
+            self inform:
+                'Impossible d''enregistrer, champs invalides :'
+                , String cr
+                , ((invalides collect: [ :d | '- ' , d label ]) inject: '' into: [ :acc :line | acc , line , String cr ]) ].
+]
+
 { #category : 'accessing' }
 SRFormApp >> showTrace [
-    | log text |
+    "Affiche le log Ψ horodaté et l'exporte aussi vers un fichier texte,
+    pour garder une trace consultable en dehors de l'image Pharo."
+    | log text path |
     log := psiEngine traceLog.
     log isEmpty
-        ifTrue: [ self inform: 'Aucune intercession enregistrée.' ]
-        ifFalse: [
-            text := log inject: '' into: [ :acc :each |
-                acc , each key printString , ' — ' , each value , String cr ].
-            self inform: text ]
+        ifTrue: [ ^ self inform: 'Aucune intercession enregistrée.' ].
+    text := log inject: '' into: [ :acc :each |
+        acc , each key printString , ' — ' , each value , String cr ].
+    path := FileLocator workingDirectory / ('axpl-trace-' , DateAndTime now asInteger printString , '.txt').
+    path writeStreamDo: [ :stream | stream nextPutAll: text ].
+    self inform: text , String cr , 'Exportée vers : ' , path fullName.
 ]
 
 { #category : 'accessing' }
