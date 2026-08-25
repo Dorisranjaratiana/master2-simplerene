@@ -25,6 +25,15 @@ AXPLSpecVisitor >> assembleContainer: aCollectionOfItems [
     ^ mainLayout
 ]
 
+{ #category : 'private' }
+AXPLSpecVisitor >> labelTextFor: aDescription [
+	"Marque visuellement les champs obligatoires (beRequired), pour que
+	l'utilisateur sache avant de valider pourquoi Enregistrer peut échouer."
+	^ aDescription isRequired
+		ifTrue: [ aDescription label , ' *' ]
+		ifFalse: [ aDescription label ]
+]
+
 { #category : 'accessing' }
 AXPLSpecVisitor >> presenter: aPresenter [
 	presenter := aPresenter
@@ -38,7 +47,7 @@ AXPLSpecVisitor >> visitBooleanDescription: aDesc [
     explicabilityText := aDesc commentFor: currentLevel.
 
     checkbox := presenter newCheckBox.
-    checkbox label: aDesc label.
+    checkbox label: (self labelTextFor: aDesc).
     "CORRECTION : On passe la String extraite, pas le dictionnaire"
     checkbox help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
     
@@ -62,7 +71,7 @@ AXPLSpecVisitor >> visitDateDescription: aDescription [
     input whenDateChanged: [ :aDate |
         aDescription write: aDate to: targetObject ].
 
-    label := presenter newLabel label: aDescription label.
+    label := presenter newLabel label: (self labelTextFor: aDescription).
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
 
     ^ self withLabel: label for: input
@@ -83,7 +92,7 @@ AXPLSpecVisitor >> visitNumberDescription: aDescription [
         (aDescription isSatisfiedBy: num)
             ifTrue: [ aDescription write: num to: targetObject ] ].
 
-    label := presenter newLabel label: aDescription label.
+    label := presenter newLabel label: (self labelTextFor: aDescription).
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
 
     ^ self withLabel: label for: input
@@ -96,7 +105,7 @@ AXPLSpecVisitor >> visitSingleOptionDescription: aDesc [
     currentLevel := presenter levelDropList selectedItem.
     explicabilityText := aDesc commentFor: currentLevel.
 
-    label := presenter newLabel label: aDesc label.
+    label := presenter newLabel label: (self labelTextFor: aDesc).
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
 
     drop := presenter newDropList.
@@ -118,7 +127,7 @@ AXPLSpecVisitor >> visitStringDescription: aDesc [
     currentLevel := presenter levelDropList selectedItem.
     explicabilityText := aDesc commentFor: currentLevel.
 
-    label := presenter newLabel label: aDesc label.
+    label := presenter newLabel label: (self labelTextFor: aDesc).
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
 
     input := presenter newTextInput.

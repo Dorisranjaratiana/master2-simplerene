@@ -96,7 +96,7 @@ SRFormApp >> initializePresenters [
         display: [ :item | item asString capitalized ];
         whenSelectedItemChangedDo: [ :item | self updateInterface ].
     generateButton := self newButton
-        label: 'Générer';
+        label: 'Rafraîchir';
         icon: (self iconNamed: #refresh);
         action: [ self updateInterface ].
     formContainer := self newPresenter.
@@ -130,7 +130,9 @@ SRFormApp >> initializePresenters [
 SRFormApp >> initializeWindow: aWindowPresenter [
     super initializeWindow: aWindowPresenter.
     aWindowPresenter
-        title: 'Framework {A,X,Ψ,L}';
+        title: (targetObject
+            ifNil: [ 'Framework {A,X,Ψ,L}' ]
+            ifNotNil: [ :obj | obj class name , ' — AXΨL' ]);
         initialExtent: 500 @ 950.
 ]
 
@@ -193,7 +195,7 @@ SRFormApp >> resetInterface [
         metaContainer: metaContainer;
         yourself.
     formContainer layout: SpBoxLayout newVertical.
-    statusLabel label: 'Sélectionnez un niveau et cliquez sur Générer.'.
+    statusLabel label: 'Sélectionnez un niveau et cliquez sur Rafraîchir.'.
     levelDropList selectIndex: 1.
     actionBar visible: false.
     self update.
@@ -342,6 +344,18 @@ SRFormApp >> save [
                 , ((invalides collect: [ :d | '- ' , d label ]) inject: '' into: [ :acc :line | acc , line , String cr ]) ].
 ]
 
+{ #category : 'updating' }
+SRFormApp >> showHiddenFieldsExplanation: aCollectionOfDescriptions [
+    "② Explique en un seul écran pourquoi chaque champ masqué ne s'affiche
+    pas au niveau courant, au lieu d'un bouton par champ."
+    | text |
+    text := aCollectionOfDescriptions inject: '' into: [ :acc :d |
+        | expl |
+        expl := d commentFor: levelDropList selectedItem.
+        acc , d label , ' : ' , (expl ifNil: [ 'Accès restreint.' ]) , String cr ].
+    self inform: text.
+]
+
 { #category : 'accessing' }
 SRFormApp >> showTrace [
     "Affiche le log Ψ horodaté et l'exporte aussi vers un fichier texte,
@@ -433,16 +447,15 @@ SRFormApp >> updateInterface [
         presenter: self.
     newLayout := visitor visit: visibleDescs.
 
-    "② Champs masqués avec explication (X)"
+    "② Champs masqués avec explication (X) — un seul bouton groupé plutôt
+    qu'un par champ, pour ne pas noyer les champs visibles."
     hidden := metaContainer children
         reject: [ :d | builder canUserSee: d ].
-    hidden do: [ :d |
-        | expl |
-        expl := d commentFor: levelDropList selectedItem.
+    hidden notEmpty ifTrue: [
         newLayout add: (self newButton
             icon: (self iconNamed: #help);
-            label: d label , ' (masqué)';
-            action: [ self inform: (expl ifNil: [ 'Accès restreint.' ]) ])
+            label: hidden size printString , ' champ(s) supplémentaire(s) masqué(s) — niveau supérieur requis';
+            action: [ self showHiddenFieldsExplanation: hidden ])
             expand: false ].
 
     formContainer layout: newLayout.
