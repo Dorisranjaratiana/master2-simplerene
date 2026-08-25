@@ -123,6 +123,30 @@ AXPLTest >> testAXPLSpecVisitorEstUnAXPLVisitor [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testJsonVisitorAssembleContainer [
+    "Le visiteur JSON produit une structure pure (Dictionary/Array), pas
+    de widget Spec — la preuve que le portage n'a pas besoin de Spec2."
+    | visitor result |
+    visitor := AXPLJsonVisitor on: client level: #simple.
+    result := visitor visit: (container children select: [ :d | d level = #simple ]).
+    self assert: (result at: #type) equals: 'group'.
+    self assert: (result at: #fields) notEmpty.
+    self assert: ((result at: #fields) allSatisfy: [ :f | f isKindOf: Dictionary ]).
+]
+
+{ #category : 'tests' }
+AXPLTest >> testJsonVisitorStringDescription [
+    | visitor desc json |
+    desc := container children detect: [ :d | d label = 'Nom' ].
+    client nom: 'Ranjaratiana'.
+    visitor := AXPLJsonVisitor on: client level: #expert.
+    json := desc acceptAXPLVisitor: visitor.
+    self assert: (json at: #label) equals: 'Nom'.
+    self assert: (json at: #type) equals: 'string'.
+    self assert: (json at: #value) equals: 'Ranjaratiana'.
+]
+
+{ #category : 'tests' }
 AXPLTest >> testGenericite [
     "Le framework fonctionne avec tout objet qui implémente descriptionForAXPL"
     self assert: (client class respondsTo: #descriptionForAXPL).
