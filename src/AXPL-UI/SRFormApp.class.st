@@ -198,6 +198,7 @@ SRFormApp >> resetInterface [
     statusLabel label: 'Sélectionnez un niveau et cliquez sur Rafraîchir.'.
     levelDropList selectIndex: 1.
     actionBar visible: false.
+    self resizeWindowFor: 0 hiddenButtonShown: false.
     self update.
 ]
 
