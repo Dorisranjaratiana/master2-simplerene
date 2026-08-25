@@ -228,11 +228,53 @@ AXPLTest >> testGenericiteEtudiant [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testNiveauParDefaut [
+    "Une description fraîche, sans level: explicite, doit être #simple
+    (defaultDisclosureLevel de l'extension SRDescription)."
+    self assert: SRStringDescription new level equals: #simple.
+]
+
+{ #category : 'tests' }
 AXPLTest >> testOrdreChampsParPriorite [
     "Le vrai SRPriorityContainer trie ses enfants par priority: — vérifie
-    que l'ordre déclaré (Nom en premier) est préservé après la migration
-    vers le vrai container de SimpleRene."
-    self assert: container children first label equals: 'Nom'.
+    que l'ordre déclaré complet (pas seulement le premier) est préservé
+    après la migration vers le vrai container de SimpleRene."
+    | labels |
+    labels := container children collect: [ :d | d label ].
+    self assert: labels asArray equals: #(
+        'Nom' 'Prénom' 'Âge' 'Sexe' 'Urgent' 'Allergies' 'Diagnostic'
+        'Traitement' 'Antécédents' 'Médecin Référent' 'Date d''Admission'
+        'N° Chambre' 'Téléphone' 'Contact d''Urgence' 'Assurance' 'Statut de Sortie').
+]
+
+{ #category : 'tests' }
+AXPLTest >> testOrdreChampsParPrioriteEtudiant [
+    "Même vérification que testOrdreChampsParPriorite, côté Etudiant —
+    parité de couverture entre les deux objets métier de démonstration."
+    | etudiant labels |
+    etudiant := Etudiant new.
+    labels := etudiant class descriptionForAXPL children collect: [ :d | d label ].
+    self assert: labels asArray equals: #(
+        'Nom' 'Prénom' 'Matricule' 'Filière' 'Moyenne' 'Date Naissance'
+        'E-mail' 'Boursier' 'Montant Bourse' 'Remarques' 'Éligible Diplôme' 'Adresse').
+]
+
+{ #category : 'tests' }
+AXPLTest >> testRelabelChampInexistantNeFaitRien [
+    "Ψ ne doit rien casser silencieusement quand on lui donne un label
+    qui n'existe pas — ni modification, ni entrée fantôme dans la trace."
+    engine relabelDescription: 'ChampInexistant' to: 'Nouveau'.
+    self assert: engine traceLog isEmpty.
+    self assert: (engine readDescription: 'Nouveau') isNil.
+]
+
+{ #category : 'tests' }
+AXPLTest >> testSupprimerChampInexistantNeFaitRien [
+    | tailleAvant |
+    tailleAvant := container children size.
+    engine removeField: 'ChampInexistant'.
+    self assert: container children size equals: tailleAvant.
+    self assert: engine traceLog isEmpty.
 ]
 
 { #category : 'tests' }
