@@ -1,40 +1,33 @@
 "
-""Visiteur Spec2 qui génère les widgets UI depuis les descriptions. 
+""Visiteur Spec2 (implémentation concrète d'AXPLVisitor) qui génère les
+widgets UI desktop depuis les descriptions.
 Implémente les relations ⑦ (Méta → L) et ⑧ (L → Utilisateur).
 Chaque visitXxx: génère le widget approprié avec label, tooltip (②) et binding.
-visit: parcourt une collection de descriptions et retourne un SpBoxLayout vertical.
+assembleContainer: empile les widgets déjà construits dans un SpBoxLayout vertical.
 withLabel:for: assemble label + widget en ligne horizontale.
 Travaille toujours sur le metaContainer partagé via les descriptions filtrées.""
 "
 Class {
 	#name : 'AXPLSpecVisitor',
-	#superclass : 'Object',
+	#superclass : 'AXPLVisitor',
 	#instVars : [
-		'presenter',
-		'targetObject'
+		'presenter'
 	],
 	#category : 'AXPL-UI',
 	#package : 'AXPL-UI'
 }
 
+{ #category : 'building' }
+AXPLSpecVisitor >> assembleContainer: aCollectionOfItems [
+    | mainLayout |
+    mainLayout := SpBoxLayout newVertical spacing: 8.
+    aCollectionOfItems do: [ :item | mainLayout add: item expand: false ].
+    ^ mainLayout
+]
+
 { #category : 'accessing' }
 AXPLSpecVisitor >> presenter: aPresenter [
 	presenter := aPresenter
-]
-
-{ #category : 'accessing' }
-AXPLSpecVisitor >> targetObject: anObject [
-	"Cette méthode permet d'injecter n'importe quel objet de l'extérieur"
-	targetObject := anObject.
-]
-
-{ #category : 'visiting' }
-AXPLSpecVisitor >> visit: aCollection [
-    | mainLayout |
-    mainLayout := SpBoxLayout newVertical spacing: 8.
-    aCollection do: [ :desc |
-        mainLayout add: (desc acceptAXPLVisitor: self) expand: false ].
-    ^ mainLayout
 ]
 
 { #category : 'visiting' }
@@ -76,12 +69,6 @@ AXPLSpecVisitor >> visitDateDescription: aDescription [
 ]
 
 { #category : 'visiting' }
-AXPLSpecVisitor >> visitDescription: aDescription [
-	"Si on ne connaît pas le type spécifique, on affiche un champ texte par défaut"
-	^ self visitStringDescription: aDescription
-]
-
-{ #category : 'visiting' }
 AXPLSpecVisitor >> visitNumberDescription: aDescription [
     | input numValue currentLevel explicabilityText label |
     
@@ -100,16 +87,6 @@ AXPLSpecVisitor >> visitNumberDescription: aDescription [
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
 
     ^ self withLabel: label for: input
-]
-
-{ #category : 'visiting' }
-AXPLSpecVisitor >> visitPriorityContainer: aContainer [
-	| vLayout |
-	vLayout := SpBoxLayout newVertical.
-	vLayout spacing: 10.
-	aContainer children do: [ :each |
-		vLayout add: (each acceptAXPLVisitor: self) expand: false ].
-	^ vLayout
 ]
 
 { #category : 'visiting' }

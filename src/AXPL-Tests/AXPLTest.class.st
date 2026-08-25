@@ -112,6 +112,17 @@ AXPLTest >> testAcceptAXPLVisitorDispatch [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testAXPLSpecVisitorEstUnAXPLVisitor [
+    "Prépare le portage vers d'autres cibles (web, JSON...) : AXPLSpecVisitor
+    n'est qu'une implémentation concrète du contrat abstrait AXPLVisitor,
+    qui lui ne dépend d'aucun toolkit UI."
+    self assert: (AXPLSpecVisitor inheritsFrom: AXPLVisitor).
+    self
+        should: [ AXPLVisitor new visitStringDescription: SRStringDescription new ]
+        raise: Error.
+]
+
+{ #category : 'tests' }
 AXPLTest >> testGenericite [
     "Le framework fonctionne avec tout objet qui implémente descriptionForAXPL"
     self assert: (client class respondsTo: #descriptionForAXPL).
