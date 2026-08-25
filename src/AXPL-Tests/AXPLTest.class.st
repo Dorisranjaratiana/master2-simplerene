@@ -57,11 +57,63 @@ AXPLTest >> testFiltragSimple [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testAcceptAXPLVisitorDispatch [
+    "⑦ — chaque type de description doit dispatcher vers la bonne méthode
+    du visiteur ET renvoyer sa valeur de retour. Régression : le
+    acceptSimpleReneVisitor: natif de SimpleRene n'a pas de ^ et ne
+    renvoie donc pas le widget construit par le visiteur (bug corrigé)."
+    | probe |
+    probe := AXPLVisitorProbe new.
+    self
+        assert: ((SRStringDescription new accessor: #nom; yourself) acceptAXPLVisitor: probe)
+        equals: #stringVisited.
+    self
+        assert: ((SRNumberDescription new accessor: #age; yourself) acceptAXPLVisitor: probe)
+        equals: #numberVisited.
+    self
+        assert: ((SRBooleanDescription new accessor: #isUrgent; yourself) acceptAXPLVisitor: probe)
+        equals: #booleanVisited.
+    self
+        assert: ((SRDateDescription new accessor: #dateAdmission; yourself) acceptAXPLVisitor: probe)
+        equals: #dateVisited.
+    self
+        assert: ((SRSingleOptionDescription new accessor: #sexe; options: #('a' 'b'); yourself) acceptAXPLVisitor: probe)
+        equals: #singleOptionVisited.
+    self
+        assert: (container acceptAXPLVisitor: probe)
+        equals: #priorityContainerVisited.
+]
+
+{ #category : 'tests' }
 AXPLTest >> testGenericite [
     "Le framework fonctionne avec tout objet qui implémente descriptionForAXPL"
     self assert: (client class respondsTo: #descriptionForAXPL).
     self assert: container children notEmpty.
     self assert: (builder build isKindOf: Collection).
+]
+
+{ #category : 'tests' }
+AXPLTest >> testGenericiteEtudiant [
+    "Le framework fonctionne aussi avec Etudiant, pas seulement ClientHopital"
+    | etudiant etudiantContainer etudiantBuilder |
+    etudiant := Etudiant new.
+    etudiantContainer := etudiant class descriptionForAXPL.
+    etudiantBuilder := AXPLFormBuilder new
+        targetObject: etudiant;
+        metaContainer: etudiantContainer;
+        userLevel: #simple;
+        yourself.
+    self assert: etudiantContainer children notEmpty.
+    self assert: (etudiantBuilder build allSatisfy: [ :d | d level = #simple ]).
+    self assert: etudiantContainer children first label equals: 'Nom'.
+]
+
+{ #category : 'tests' }
+AXPLTest >> testOrdreChampsParPriorite [
+    "Le vrai SRPriorityContainer trie ses enfants par priority: — vérifie
+    que l'ordre déclaré (Nom en premier) est préservé après la migration
+    vers le vrai container de SimpleRene."
+    self assert: container children first label equals: 'Nom'.
 ]
 
 { #category : 'tests' }

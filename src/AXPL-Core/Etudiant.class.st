@@ -9,21 +9,13 @@ Class {
 		'prenom',
 		'matricule',
 		'dateNaissance',
-		'sexe',
 		'filiere',
-		'niveau',
 		'moyenne',
-		'mention',
-		'anneeEntree',
 		'email',
-		'telephone',
 		'adresse',
 		'boursier',
 		'montantBourse',
-		'statut',
-		'assiduite',
 		'remarques',
-		'projetsEnCours',
 		'estDiplomable'
 	],
 	#category : 'AXPL-Core',
@@ -34,14 +26,14 @@ Class {
 Etudiant class >> descriptionForAXPL [
 	| container |
 	container := SRPriorityContainer new label: 'Dossier Académique AXPL'.
-	
+
 	"--- NIVEAU SIMPLE : Identité et Cursus ---"
 	container add: (SRStringDescription new
 		label: 'Nom';
 		accessor: #nom;
 		priority: 10;
 		level: #simple;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #simple put: 'Votre nom de famille officiel.';
 			at: #base   put: 'Identifiant civil pour les registres universitaires.';
 			at: #expert put: 'Clé d''indexation pour la synchronisation des bases nationales.';
@@ -52,7 +44,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #prenom;
 		priority: 20;
 		level: #simple;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #simple put: 'Votre prénom usuel.';
 			at: #base   put: 'Prénom utilisé pour la personnalisation des diplômes.';
 			at: #expert put: 'Attribut de désambiguïsation pour la gestion des homonymes.';
@@ -63,7 +55,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #matricule;
 		priority: 30;
 		level: #simple;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #simple put: 'Votre numéro d''étudiant unique.';
 			at: #base   put: 'Identifiant de session pour les examens et services numériques.';
 			at: #expert put: 'Clé primaire liant le dossier pédagogique et financier.';
@@ -75,7 +67,7 @@ Etudiant class >> descriptionForAXPL [
 		options: #('Informatique' 'Médecine' 'Droit' 'Arts');
 		priority: 40;
 		level: #simple;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #simple put: 'Votre domaine d''études principal.';
 			at: #base   put: 'Parcours académique définissant vos unités d''enseignement.';
 			at: #expert put: 'Code de nomenclature disciplinaire pour l''accréditation.';
@@ -87,7 +79,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #moyenne;
 		priority: 50;
 		level: #base;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #simple put: 'Votre résultat global actuel.';
 			at: #base   put: 'Indicateur de performance pour le suivi pédagogique.';
 			at: #expert put: 'Variable quantitative pour le calcul du classement et des mentions.';
@@ -98,7 +90,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #dateNaissance;
 		priority: 60;
 		level: #base;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #base   put: 'Votre date de naissance officielle.';
 			at: #expert put: 'Vérification de l''âge légal pour les droits sociaux et assurances.';
 			yourself)).
@@ -108,7 +100,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #email;
 		priority: 70;
 		level: #base;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #simple put: 'Votre adresse de contact universitaire.';
 			at: #base   put: 'Canal de communication pour les convocations officielles.';
 			at: #expert put: 'Identifiant de sécurité pour l''authentification SSO.';
@@ -119,7 +111,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #boursier;
 		priority: 80;
 		level: #base;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #simple put: 'Indique si vous bénéficiez d''une aide financière.';
 			at: #base   put: 'Statut utilisé pour l''exonération des frais d''inscription.';
 			at: #expert put: 'Indicateur de profil social pour les statistiques ministérielles.';
@@ -131,7 +123,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #montantBourse;
 		priority: 90;
 		level: #expert;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #base   put: 'Somme allouée pour l''année universitaire.';
 			at: #expert put: 'Variable budgétaire soumise à vérification d''assiduité.';
 			yourself)).
@@ -141,7 +133,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #remarques;
 		priority: 100;
 		level: #expert;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #base   put: 'Commentaires du corps enseignant.';
 			at: #expert put: 'Évaluations qualitatives confidentielles du jury de délibération.';
 			yourself)).
@@ -151,7 +143,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #estDiplomable;
 		priority: 110;
 		level: #expert;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #base   put: 'Vérification des crédits ECTS requis.';
 			at: #expert put: 'État logique final validant la fin du cycle universitaire.';
 			yourself)).
@@ -161,7 +153,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #adresse;
 		priority: 120;
 		level: #expert;
-		comment: (Dictionary new 
+		comment: (Dictionary new
 			at: #base   put: 'Votre lieu de résidence actuel.';
 			at: #expert put: 'Donnée géographique pour la gestion des zones de bourses.';
 			yourself)).
@@ -175,22 +167,6 @@ Etudiant >> adresse [ ^ adresse
 
 { #category : 'accessing' }
 Etudiant >> adresse: anObject [ adresse := anObject
-]
-
-{ #category : 'accessing' }
-Etudiant >> anneeEntree [ ^ anneeEntree
-]
-
-{ #category : 'accessing' }
-Etudiant >> anneeEntree: anObject [ anneeEntree := anObject
-]
-
-{ #category : 'accessing' }
-Etudiant >> assiduite [ ^ assiduite
-]
-
-{ #category : 'accessing' }
-Etudiant >> assiduite: anObject [ assiduite := anObject
 ]
 
 { #category : 'accessing' }
@@ -253,14 +229,6 @@ Etudiant >> matricule: anObject [ matricule := anObject
 ]
 
 { #category : 'accessing' }
-Etudiant >> mention [ ^ mention
-]
-
-{ #category : 'accessing' }
-Etudiant >> mention: anObject [ mention := anObject
-]
-
-{ #category : 'accessing' }
 Etudiant >> montantBourse [ ^ montantBourse
 ]
 
@@ -274,14 +242,6 @@ Etudiant >> moyenne [ ^ moyenne
 
 { #category : 'accessing' }
 Etudiant >> moyenne: anObject [ moyenne := anObject
-]
-
-{ #category : 'accessing' }
-Etudiant >> niveau [ ^ niveau
-]
-
-{ #category : 'accessing' }
-Etudiant >> niveau: anObject [ niveau := anObject
 ]
 
 { #category : 'accessing' }
@@ -301,41 +261,9 @@ Etudiant >> prenom: anObject [ prenom := anObject
 ]
 
 { #category : 'accessing' }
-Etudiant >> projetsEnCours [ ^ projetsEnCours
-]
-
-{ #category : 'accessing' }
-Etudiant >> projetsEnCours: anObject [ projetsEnCours := anObject
-]
-
-{ #category : 'accessing' }
 Etudiant >> remarques [ ^ remarques
 ]
 
 { #category : 'accessing' }
 Etudiant >> remarques: anObject [ remarques := anObject
-]
-
-{ #category : 'accessing' }
-Etudiant >> sexe [ ^ sexe
-]
-
-{ #category : 'accessing' }
-Etudiant >> sexe: anObject [ sexe := anObject
-]
-
-{ #category : 'accessing' }
-Etudiant >> statut [ ^ statut
-]
-
-{ #category : 'accessing' }
-Etudiant >> statut: anObject [ statut := anObject
-]
-
-{ #category : 'accessing' }
-Etudiant >> telephone [ ^ telephone
-]
-
-{ #category : 'accessing' }
-Etudiant >> telephone: anObject [ telephone := anObject
 ]

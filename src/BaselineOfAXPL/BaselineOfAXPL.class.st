@@ -13,10 +13,12 @@ BaselineOfAXPL >> baseline: spec [
     <baseline>
     spec for: #common do: [
         "Dépendance externe : AXPL étend le vrai framework SimpleRene au lieu
-        d'en réimplémenter une version simplifiée (cf. suggestion S. Ducasse)"
+        d'en réimplémenter une version simplifiée (cf. suggestion S. Ducasse).
+        Épinglé sur un commit précis (plutôt que la branche master mobile)
+        pour la reproductibilité du build."
         spec
             baseline: 'SimpleRene'
-            with: [ spec repository: 'github://pharo-contributions/SimpleRene:master/src' ].
+            with: [ spec repository: 'github://pharo-contributions/SimpleRene:de059fc2e3732594fc6e0320e25c966b58a7ba64/src' ].
 
         "Packages du projet dans l'ordre de dépendance"
         spec

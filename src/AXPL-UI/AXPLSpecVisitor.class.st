@@ -17,23 +17,6 @@ Class {
 	#package : 'AXPL-UI'
 }
 
-{ #category : 'building' }
-AXPLSpecVisitor >> buildComponentFor: aSlot [
-	| row |
-	"1. Création d'une ligne horizontale"
-	row := SpBoxLayout newHorizontal spacing: 10.
-	
-	"2. Ajout du Label (Nom de la variable)"
-	row add: (presenter newLabel label: aSlot name capitalized) width: 120.
-	
-	"3. Ajout du Champ de saisie avec la valeur réelle de l'objet (Ψ Réflexivité)"
-	row add: (presenter newTextInput 
-		text: (targetObject readSlot: aSlot) asString) 
-		expand: true.
-		
-	^ row
-]
-
 { #category : 'accessing' }
 AXPLSpecVisitor >> presenter: aPresenter [
 	presenter := aPresenter
@@ -74,17 +57,6 @@ AXPLSpecVisitor >> visitBooleanDescription: aDesc [
 ]
 
 { #category : 'visiting' }
-AXPLSpecVisitor >> visitCommand: aCommand [
-    | button |
-    button := presenter newButton.
-    button label: aCommand label.
-    button action: [ aCommand execute ].
-    
-    "Optionnel : on pourrait ajouter une icône ici"
-    ^ button
-]
-
-{ #category : 'visiting' }
 AXPLSpecVisitor >> visitDateDescription: aDescription [
     | input dateValue currentLevel explicabilityText label |
     
@@ -94,6 +66,8 @@ AXPLSpecVisitor >> visitDateDescription: aDescription [
     input := SpDatePresenter new.
     dateValue := aDescription read: targetObject.
     input date: (dateValue ifNil: [ Date today ] ifNotNil: [ dateValue ]).
+    input whenDateChangedDo: [ :aDate |
+        aDescription write: aDate to: targetObject ].
 
     label := presenter newLabel label: aDescription label.
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).

@@ -38,14 +38,6 @@ AXPLFormBuilder >> canUserSee: aDescription [
     ^ aDescription level = #simple
 ]
 
-{ #category : 'filtre' }
-AXPLFormBuilder >> filterVars: aCollection forLevel: aLevel [
-    "Logique neutre d'adaptation"
-    aLevel = #simple ifTrue: [ ^ aCollection first: (3 min: aCollection size) ].
-    aLevel = #base ifTrue: [ ^ aCollection first: (6 min: aCollection size) ].
-    ^ aCollection
-]
-
 { #category : 'accessing' }
 AXPLFormBuilder >> metaContainer: aContainer [
     metaContainer := aContainer

@@ -82,13 +82,6 @@ SRFormApp >> generateButton: anObject [
 ]
 
 { #category : 'initialization' }
-SRFormApp >> generateForm [
-    "À compléter avec la logique de génération du formulaire"
-    statusLabel label: 'Formulaire généré'.
-
-]
-
-{ #category : 'initialization' }
 SRFormApp >> initialize [
     super initialize.
     targetObject := nil.
@@ -197,7 +190,6 @@ SRFormApp >> resetInterface [
     statusLabel label: 'Sélectionnez un niveau et cliquez sur Générer.'.
     levelDropList selectIndex: 1.
     actionBar visible: false.
-   actionBar visible: false.
     self update.
 ]
 
