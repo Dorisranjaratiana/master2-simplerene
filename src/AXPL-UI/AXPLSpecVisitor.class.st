@@ -66,7 +66,7 @@ AXPLSpecVisitor >> visitDateDescription: aDescription [
     input := SpDatePresenter new.
     dateValue := aDescription read: targetObject.
     input date: (dateValue ifNil: [ Date today ] ifNotNil: [ dateValue ]).
-    input whenDateChangedDo: [ :aDate |
+    input whenDateChanged: [ :aDate |
         aDescription write: aDate to: targetObject ].
 
     label := presenter newLabel label: aDescription label.
