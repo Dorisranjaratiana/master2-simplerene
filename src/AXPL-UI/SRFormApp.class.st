@@ -52,7 +52,7 @@ SRFormApp >> defaultLayout [
             add: levelDropList expand: true;
             yourself) expand: false;
         add: generateButton expand: false;
-        add: (SpScrollableLayout with: formContainer) expand: true;
+        add: formContainer expand: true;
         add: actionBar expand: false;
         yourself
 ]
