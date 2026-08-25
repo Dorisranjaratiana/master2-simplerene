@@ -63,6 +63,29 @@ AXPLTest >> testExplicationContextuelle [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testErreurMetaContainerNonInitialise [
+    "① — build sans metaContainer signale une erreur explicite plutôt que
+    de planter silencieusement plus loin."
+    | builderSansContainer |
+    builderSansContainer := AXPLFormBuilder new
+        targetObject: client;
+        userLevel: #simple;
+        yourself.
+    self should: [ builderSansContainer build ] raise: Error.
+]
+
+{ #category : 'tests' }
+AXPLTest >> testFiltragBase [
+    "① — En mode base, les champs simple ET base sont visibles, jamais expert"
+    | result |
+    builder userLevel: #base.
+    result := builder build.
+    self assert: result notEmpty.
+    self assert: (result allSatisfy: [ :d | d level = #simple or: [ d level = #base ] ]).
+    self deny: (result anySatisfy: [ :d | d level = #expert ]).
+]
+
+{ #category : 'tests' }
 AXPLTest >> testFiltragExpert [
     "① — En mode expert, tous les champs sont visibles"
     | resultSimple resultExpert |
@@ -147,6 +170,40 @@ AXPLTest >> testJsonVisitorStringDescription [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testJsonVisitorBooleanDescription [
+    | visitor desc json |
+    desc := container children detect: [ :d | d label = 'Urgent' ].
+    client isUrgent: true.
+    visitor := AXPLJsonVisitor on: client level: #simple.
+    json := desc acceptAXPLVisitor: visitor.
+    self assert: (json at: #type) equals: 'boolean'.
+    self assert: (json at: #value) equals: true.
+]
+
+{ #category : 'tests' }
+AXPLTest >> testJsonVisitorNumberDescription [
+    | visitor desc json |
+    desc := container children detect: [ :d | d label = 'Âge' ].
+    client age: 42.
+    visitor := AXPLJsonVisitor on: client level: #simple.
+    json := desc acceptAXPLVisitor: visitor.
+    self assert: (json at: #type) equals: 'number'.
+    self assert: (json at: #value) equals: 42.
+]
+
+{ #category : 'tests' }
+AXPLTest >> testJsonVisitorSingleOptionDescription [
+    | visitor desc json |
+    desc := container children detect: [ :d | d label = 'Sexe' ].
+    client sexe: 'Féminin'.
+    visitor := AXPLJsonVisitor on: client level: #simple.
+    json := desc acceptAXPLVisitor: visitor.
+    self assert: (json at: #type) equals: 'select'.
+    self assert: (json at: #value) equals: 'Féminin'.
+    self assert: (json at: #options) equals: #('Masculin' 'Féminin' 'Autre').
+]
+
+{ #category : 'tests' }
 AXPLTest >> testGenericite [
     "Le framework fonctionne avec tout objet qui implémente descriptionForAXPL"
     self assert: (client class respondsTo: #descriptionForAXPL).
@@ -176,6 +233,18 @@ AXPLTest >> testOrdreChampsParPriorite [
     que l'ordre déclaré (Nom en premier) est préservé après la migration
     vers le vrai container de SimpleRene."
     self assert: container children first label equals: 'Nom'.
+]
+
+{ #category : 'tests' }
+AXPLTest >> testChangementNiveauPsi [
+    "④⑨ — Ψ change le niveau d'un champ existant à l'exécution"
+    | desc |
+    desc := engine readDescription: 'Allergies'.
+    self assert: desc level equals: #expert.
+
+    engine setLevel: #simple ofDescription: 'Allergies'.
+    self assert: desc level equals: #simple.
+    self assert: (engine traceLog last value includesSubstring: 'Allergies').
 ]
 
 { #category : 'tests' }

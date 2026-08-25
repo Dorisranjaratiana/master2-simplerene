@@ -131,7 +131,7 @@ AXPLReflexivityEngine >> relabelDescription: oldLabel to: newLabel [
             value: ('Rename: ' , oldLabel , ' → ' , newLabel)) ].
 ]
 
-{ #category : 'initialization' }
+{ #category : 'intercession' }
 AXPLReflexivityEngine >> setLevel: aNewLevel ofDescription: aLabel [
     | desc |
     desc := metaContainer children
