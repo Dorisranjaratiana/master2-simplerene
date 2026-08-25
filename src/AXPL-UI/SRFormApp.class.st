@@ -133,7 +133,7 @@ SRFormApp >> initializeWindow: aWindowPresenter [
         title: (targetObject
             ifNil: [ 'Framework {A,X,Ψ,L}' ]
             ifNotNil: [ :obj | obj class name , ' — AXΨL' ]);
-        initialExtent: 500 @ 950.
+        initialExtent: 500 @ 400. "resizeWindowFor:hiddenButtonShown: agrandit dès le premier rendu"
 ]
 
 { #category : 'accessing' }
@@ -397,6 +397,17 @@ SRFormApp >> targetObject: anObject [
         yourself.
 ]
 
+{ #category : 'layout' }
+SRFormApp >> resizeWindowFor: visibleFieldCount hiddenButtonShown: hasHiddenButton [
+    "Adapte la hauteur de la fenêtre au nombre de champs réellement
+    affichés à ce niveau, au lieu d'une hauteur fixe qui laisse un grand
+    vide en Simple/Base et déborde à peine en Expert."
+    | rowCount desiredHeight |
+    rowCount := visibleFieldCount + (hasHiddenButton ifTrue: [ 1 ] ifFalse: [ 0 ]).
+    desiredHeight := ((rowCount * 41) + 270) min: 950 max: 400.
+    self window ifNotNil: [ :w | w extent: 500 @ desiredHeight ].
+]
+
 { #category : 'accessing' }
 SRFormApp >> traceButton [
 
@@ -460,5 +471,6 @@ SRFormApp >> updateInterface [
 
     formContainer layout: newLayout.
     actionBar visible: true.
+    self resizeWindowFor: visibleDescs size hiddenButtonShown: hidden notEmpty.
     self update.
 ]
