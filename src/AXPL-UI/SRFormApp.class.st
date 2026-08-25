@@ -4,7 +4,6 @@ Slots principaux :
   - metaContainer : source unique de vérité, initialisé une seule fois dans targetObject:
   - psiEngine : moteur Ψ, initialisé une seule fois, garde les modifications en mémoire
   - levelDropList : sélection du niveau utilisateur (⑨)
-  - scrollablePresenter : zone scrollable pour les champs générés
   - psiButton : bouton Ψ visible seulement en mode Expert
   - traceButton : affiche le log horodaté [t] en mode Expert
 updateInterface : méthode centrale qui orchestre ①②⑦⑧⑨⑩.
@@ -23,8 +22,7 @@ Class {
 		'psiButton',
 		'metaContainer',
 		'psiEngine',
-		'traceButton',
-		'scrollablePresenter'
+		'traceButton'
 	],
 	#category : 'AXPL-UI',
 	#package : 'AXPL-UI'
@@ -54,7 +52,7 @@ SRFormApp >> defaultLayout [
             add: levelDropList expand: true;
             yourself) expand: false;
         add: generateButton expand: false;
-        add: formContainer expand: true;
+        add: (SpScrollableLayout with: formContainer) expand: true;
         add: actionBar expand: false;
         yourself
 ]
@@ -108,8 +106,6 @@ SRFormApp >> initializePresenters [
         action: [ self updateInterface ].
     formContainer := self newPresenter.
     formContainer layout: SpBoxLayout newVertical.
-    scrollablePresenter := SpPresenter new.
-    scrollablePresenter layout: SpBoxLayout newVertical.
     psiButton := self newButton label: ''; yourself.
     traceButton := self newButton
         label: 'Trace Ψ';
