@@ -93,7 +93,8 @@ SRFormApp >> initializePresenters [
     statusLabel := self newLabel label: 'Prêt'.
     levelDropList := self newDropList
         items: #( #simple #base #expert );
-        display: [ :item | item asString capitalized ].
+        display: [ :item | item asString capitalized ];
+        whenSelectedItemChangedDo: [ :item | self updateInterface ].
     generateButton := self newButton
         label: 'Générer';
         icon: (self iconNamed: #refresh);
