@@ -86,6 +86,26 @@ AXPLTest >> testFiltragBase [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testCreationChampDoublonRefusee [
+    "⑥ — readDescription: ne renvoie que le premier champ trouvé par
+    label ; un doublon rendrait le second inaccessible à Ψ. Créer un
+    champ avec un label déjà pris doit être refusé, pas silencieux."
+    engine createField: 'Note interne' type: SRStringDescription level: #expert.
+    self
+        should: [ engine createField: 'Note interne' type: SRStringDescription level: #base ]
+        raise: Error.
+]
+
+{ #category : 'tests' }
+AXPLTest >> testNiveauInvalideLeveUneErreur [
+    "① — Un niveau qui n'est ni #simple, ni #base, ni #expert doit
+    échouer clairement plutôt que d'être traité silencieusement comme
+    #simple — important maintenant qu'AXPLWebServer accepte le niveau
+    depuis une requête HTTP externe non fiable."
+    self should: [ builder userLevel: #inconnu ] raise: Error.
+]
+
+{ #category : 'tests' }
 AXPLTest >> testFiltragExpert [
     "① — En mode expert, tous les champs sont visibles"
     | resultSimple resultExpert |
@@ -215,6 +235,18 @@ AXPLTest >> testWebServerFormJsonReutiliseFormBuilderEtJsonVisitor [
     self assert: (json at: #type) equals: 'group'.
     self assert: (json at: #fields) notEmpty.
     self assert: ((json at: #fields) allSatisfy: [ :f | (f at: #level) = 'simple' ]).
+]
+
+{ #category : 'tests' }
+AXPLTest >> testWebServerSafelyCapturesErreurs [
+    "Une requête HTTP malformée (niveau invalide, clé JSON manquante...)
+    ne doit jamais faire remonter une trace Smalltalk brute au client —
+    toujours une Dictionary {error: ...} propre."
+    | server result |
+    server := AXPLWebServer new targetObject: client; yourself.
+    result := server safely: [ server formJsonFor: #inconnu ].
+    self assert: (result at: #error) notNil.
+    self assert: (result includesKey: #ok) not.
 ]
 
 { #category : 'tests' }

@@ -45,10 +45,21 @@ AXPLReflexivityEngine >> accessorKeyFor: aLabel [
     ^ (cleaned , nextKeyId printString) asSymbol
 ]
 
+{ #category : 'private' }
+AXPLReflexivityEngine >> assertLabelAvailable: aLabel [
+    "readDescription: fait un detect: qui ne renvoie que le PREMIER champ
+    trouvé — un doublon de label rendrait le second champ inaccessible à
+    relabelDescription:/removeField:. On refuse la création plutôt que de
+    laisser ce piège silencieux se produire."
+    (self readDescription: aLabel) ifNotNil: [
+        Error signal: 'Un champ "' , aLabel , '" existe déjà.' ]
+]
+
 { #category : 'intercession' }
 AXPLReflexivityEngine >> createField: aLabel type: aDescriptionClass level: aLevel [
     "⑥ Crée un nouveau champ (String/Number/Boolean/Date) à l'exécution."
     | desc key |
+    self assertLabelAvailable: aLabel.
     key := self accessorKeyFor: aLabel.
     desc := aDescriptionClass new
         label: aLabel;
@@ -65,6 +76,7 @@ AXPLReflexivityEngine >> createField: aLabel type: aDescriptionClass level: aLev
 AXPLReflexivityEngine >> createSelectionField: aLabel options: aCollection level: aLevel [
     "⑥ Crée un nouveau champ à choix (SRSingleOptionDescription) à l'exécution."
     | desc key |
+    self assertLabelAvailable: aLabel.
     key := self accessorKeyFor: aLabel.
     desc := SRSingleOptionDescription new
         label: aLabel;

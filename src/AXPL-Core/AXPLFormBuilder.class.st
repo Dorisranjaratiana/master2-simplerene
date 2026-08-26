@@ -51,6 +51,12 @@ AXPLFormBuilder >> targetObject: anObject [
 
 { #category : 'accessing' }
 AXPLFormBuilder >> userLevel: aSymbol [
-	"Définit le rôle : #simple, #base ou #expert"
+	"Définit le rôle : #simple, #base ou #expert. Un niveau invalide était
+	auparavant traité silencieusement comme #simple (aucun des = ne
+	matchait) — dangereux maintenant qu'AXPLWebServer accepte ce niveau
+	depuis une requête HTTP externe non fiable."
+	(#(#simple #base #expert) includes: aSymbol) ifFalse: [
+		Error signal: 'Niveau invalide : ' , aSymbol printString ,
+			' (attendu #simple, #base ou #expert)' ].
 	userLevel := aSymbol
 ]

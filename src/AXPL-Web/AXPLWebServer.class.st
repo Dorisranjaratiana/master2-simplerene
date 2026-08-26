@@ -70,6 +70,18 @@ AXPLWebServer >> ok [
 	^ Dictionary new at: #ok put: true; yourself
 ]
 
+{ #category : 'private' }
+AXPLWebServer >> safely: aBlock [
+	"Toutes les routes passent par ici : une requête malformée (JSON
+	invalide, clé manquante, label inconnu, type de champ inconnu,
+	niveau invalide...) ne doit jamais renvoyer une trace Smalltalk brute
+	à un client HTTP externe — toujours du JSON propre avec un message
+	clair, même en cas d'erreur."
+	^ [ aBlock value ]
+		on: Error
+		do: [ :err | Dictionary new at: #error put: err messageText; yourself ]
+]
+
 { #category : 'psi' }
 AXPLWebServer >> psiCreateField: aRequest [
 	"⑥ — les mêmes classes de description que côté desktop, choisies
@@ -137,13 +149,13 @@ AXPLWebServer >> start: aPort [
 			resp headers at: 'Access-Control-Allow-Origin' put: '*' ];
 		OPTIONS: '/*' -> [ :req | '' ];
 		GET: '/form' -> [ :req |
-			self formJsonFor: (req at: #level ifAbsent: [ 'simple' ]) asSymbol ];
-		POST: '/field' -> [ :req | self writeField: req ];
-		POST: '/psi/rename' -> [ :req | self psiRename: req ];
-		POST: '/psi/set-level' -> [ :req | self psiSetLevel: req ];
-		POST: '/psi/create-field' -> [ :req | self psiCreateField: req ];
-		POST: '/psi/remove-field' -> [ :req | self psiRemoveField: req ];
-		GET: '/psi/trace' -> [ :req | self traceJson ].
+			self safely: [ self formJsonFor: (req at: #level ifAbsent: [ 'simple' ]) asSymbol ] ];
+		POST: '/field' -> [ :req | self safely: [ self writeField: req ] ];
+		POST: '/psi/rename' -> [ :req | self safely: [ self psiRename: req ] ];
+		POST: '/psi/set-level' -> [ :req | self safely: [ self psiSetLevel: req ] ];
+		POST: '/psi/create-field' -> [ :req | self safely: [ self psiCreateField: req ] ];
+		POST: '/psi/remove-field' -> [ :req | self safely: [ self psiRemoveField: req ] ];
+		GET: '/psi/trace' -> [ :req | self safely: [ self traceJson ] ].
 	teapot start.
 ]
 
