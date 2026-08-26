@@ -204,6 +204,20 @@ AXPLTest >> testJsonVisitorSingleOptionDescription [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testWebServerFormJsonReutiliseFormBuilderEtJsonVisitor [
+    "AXPLWebServer ne réimplémente rien : formJsonFor: doit filtrer par
+    niveau exactement comme AXPLFormBuilder, et produire la même forme
+    JSON qu'AXPLJsonVisitor tout seul. Ne démarre aucun vrai serveur
+    Teapot — juste la logique réutilisée."
+    | server json |
+    server := AXPLWebServer new targetObject: client; yourself.
+    json := server formJsonFor: #simple.
+    self assert: (json at: #type) equals: 'group'.
+    self assert: (json at: #fields) notEmpty.
+    self assert: ((json at: #fields) allSatisfy: [ :f | (f at: #level) = 'simple' ]).
+]
+
+{ #category : 'tests' }
 AXPLTest >> testGenericite [
     "Le framework fonctionne avec tout objet qui implémente descriptionForAXPL"
     self assert: (client class respondsTo: #descriptionForAXPL).

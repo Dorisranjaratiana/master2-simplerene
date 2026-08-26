@@ -23,15 +23,27 @@ BaselineOfAXPL >> baseline: spec [
                     repository: 'github://pharo-contributions/SimpleRene:de059fc2e3732594fc6e0320e25c966b58a7ba64/src';
                     loads: #( Core ) ].
 
+        "Dépendances externes pour AXPL-Web : Teapot (serveur HTTP léger)
+        et NeoJSON (sérialisation), déclarées ici plutôt que supposées
+        déjà présentes dans l'image — même principe que SimpleRene."
+        spec
+            baseline: 'Teapot'
+            with: [ spec repository: 'github://zeroflag/Teapot:master/source' ].
+        spec
+            baseline: 'NeoJSON'
+            with: [ spec repository: 'github://svenvc/NeoJSON/repository' ].
+
         "Packages du projet dans l'ordre de dépendance.
-        AXPL-UI (Spec2) et AXPL-Json (export JSON) sont deux implémentations
-        concrètes d'AXPLVisitor, chacune ne dépendant que d'AXPL-Core —
-        jamais l'une de l'autre. C'est ce qui rend le portage vers d'autres
-        cibles (web, etc.) possible sans dupliquer A/X/Ψ."
+        AXPL-UI (Spec2), AXPL-Json (export JSON) et AXPL-Web (API HTTP,
+        pour un frontend séparé type React) sont trois implémentations
+        concrètes d'AXPLVisitor/AXPLReflexivityEngine, chacune ne dépendant
+        que d'AXPL-Core — jamais l'une de l'autre. C'est ce qui rend le
+        portage vers d'autres cibles possible sans dupliquer A/X/Ψ."
         spec
             package: 'AXPL-Descriptions' with: [ spec requires: #('SimpleRene') ];
             package: 'AXPL-Core' with: [ spec requires: #('AXPL-Descriptions') ];
             package: 'AXPL-UI' with: [ spec requires: #('AXPL-Core') ];
             package: 'AXPL-Json' with: [ spec requires: #('AXPL-Core') ];
-            package: 'AXPL-Tests' with: [ spec requires: #('AXPL-Core' 'AXPL-Json') ] ]
+            package: 'AXPL-Web' with: [ spec requires: #('AXPL-Json' 'Teapot' 'NeoJSON') ];
+            package: 'AXPL-Tests' with: [ spec requires: #('AXPL-Core' 'AXPL-Json' 'AXPL-Web') ] ]
 ]

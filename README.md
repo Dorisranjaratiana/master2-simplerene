@@ -40,8 +40,10 @@ Le framework intègre nativement quatre dimensions autour d'une méta-descriptio
 
 - `AXPL-Descriptions` — Extension du vrai [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (niveau #simple/#base/#expert, explicabilité graduée)
 - `AXPL-Core` — Moteurs A et Ψ
-- `AXPL-UI` — Interface L
-- `AXPL-Tests` — 8 tests unitaires
+- `AXPL-UI` — Interface L (desktop, Spec2)
+- `AXPL-Json` — Export JSON pur (aucune dépendance Spec2), pour un frontend web séparé
+- `AXPL-Web` — API HTTP ([Teapot](https://github.com/zeroflag/Teapot) + [NeoJSON](https://github.com/svenvc/NeoJSON)) exposant AXPL-Json et Ψ à un frontend externe (React, etc.)
+- `AXPL-Tests` — suite de tests unitaires
 
 ## Dépendance
 
@@ -52,6 +54,26 @@ AXPL **dépend réellement** de [SimpleRene](https://github.com/pharo-contributi
 ## Portage vers d'autres cibles
 
 `AXPLVisitor` (dans `AXPL-Core`) est le contrat abstrait de génération, indépendant de tout toolkit UI. `AXPL-UI` (Spec2, desktop) et `AXPL-Json` (export JSON, pour un frontend web séparé) en sont deux implémentations concrètes, chacune ne dépendant que d'`AXPL-Core` — jamais l'une de l'autre.
+
+### Serveur web (AXPL-Web)
+
+```st
+AXPLWebServer onPort: 8080 forTargetObject: ClientHopital new.
+```
+
+Routes disponibles (CORS ouvert, pratique pour un frontend en développement local sur un autre port — Vite, CRA...) :
+
+| Route | Description |
+|---|---|
+| `GET /form?level=simple\|base\|expert` | Champs visibles à ce niveau, en JSON |
+| `POST /field` `{label, value}` | Écrit une valeur (validée avant écriture, comme le desktop) |
+| `POST /psi/rename` `{oldLabel, newLabel}` | Ψ — renomme un champ |
+| `POST /psi/set-level` `{label, level}` | Ψ — change le niveau d'un champ |
+| `POST /psi/create-field` `{label, type, level, options?}` | Ψ — crée un champ (`type` : `string`/`number`/`boolean`/`date`/`select`) |
+| `POST /psi/remove-field` `{label}` | Ψ — supprime un champ |
+| `GET /psi/trace` | Historique horodaté Ψ |
+
+**Limite connue** : un champ Date modifié depuis le web arrive en String JSON, pas en `Date` Pharo — l'écrire casserait l'affichage desktop du même champ. Non résolu dans cette première version ; à traiter avant d'exposer un champ Date en écriture depuis un frontend.
 
 ## Licence
 
