@@ -73,7 +73,9 @@ Routes disponibles (CORS ouvert, pratique pour un frontend en développement loc
 | `POST /psi/remove-field` `{label}` | Ψ — supprime un champ |
 | `GET /psi/trace` | Historique horodaté Ψ |
 
-**Limite connue** : un champ Date modifié depuis le web arrive en String JSON, pas en `Date` Pharo — l'écrire casserait l'affichage desktop du même champ. Non résolu dans cette première version ; à traiter avant d'exposer un champ Date en écriture depuis un frontend.
+Un champ Date envoyé par le web arrive en String JSON ISO 8601 (`AAAA-MM-JJ`) — `POST /field` la convertit en `Date` Pharo avant validation/écriture, pour ne jamais casser l'affichage desktop du même champ.
+
+Toutes les routes `POST` sont couvertes par des tests qui simulent un vrai corps JSON (`AXPLWebServerTest`), y compris la conversion explicite des clés d'objet JSON en `Symbol` — sans elle, `NeoJSONReader` les parse en `String` par défaut et chaque route échouerait silencieusement (rattrapée en `{error: ...}` par `safely:`, mais jamais fonctionnelle) sur une vraie requête HTTP.
 
 ## Licence
 

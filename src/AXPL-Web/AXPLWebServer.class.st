@@ -18,11 +18,11 @@ CORS ouvert (Access-Control-Allow-Origin: *) — pratique pour un
 frontend en développement local (Vite/CRA sur un autre port), à
 resserrer avant tout déploiement réel.
 
-LIMITE CONNUE : les champs Date reçus du web arrivent en String JSON,
-pas en Date Pharo — #writeField: les écrit tels quels. Un champ Date
-modifié depuis le web casserait l'affichage desktop (qui attend un
-vrai Date). Non résolu ici : à traiter avant d'exposer un vrai champ
-Date en écriture depuis le frontend.""
+Les champs Date reçus du web arrivent en String JSON (format ISO
+8601 'AAAA-MM-JJ', celui de <input type=date> et de
+Date#asString côté JSON) — #writeField: les convertit explicitement
+en Date Pharo avant validation/écriture, plutôt que de les stocker
+tels quels et casser l'affichage desktop (qui attend un vrai Date).""
 "
 Class {
 	#name : 'AXPLWebServer',
@@ -61,8 +61,43 @@ AXPLWebServer >> formJsonFor: aLevelSymbol [
 ]
 
 { #category : 'private' }
+AXPLWebServer >> coerceValue: aValue for: aDescription [
+	"Le JSON n'a pas de type Date natif : un champ SRDateDescription arrive
+	du web en String ISO 8601 ('AAAA-MM-JJ', tronquée si un timestamp
+	complet est envoyé). On la convertit explicitement en Date Pharo avant
+	toute validation/écriture — sinon la valeur brute finirait stockée en
+	String et casserait l'affichage desktop, qui attend un vrai Date."
+	(aDescription isKindOf: SRDateDescription) ifFalse: [ ^ aValue ].
+	(aValue isKindOf: String) ifFalse: [ ^ aValue ].
+	^ self dateFromIso: aValue
+]
+
+{ #category : 'private' }
+AXPLWebServer >> dateFromIso: aString [
+	| datePart parts year month day |
+	datePart := aString copyFrom: 1 to: (10 min: aString size).
+	parts := datePart tokenize: '-'.
+	(parts size = 3
+		and: [ (year := (parts at: 1) asInteger) notNil
+		and: [ (month := (parts at: 2) asInteger) notNil
+		and: [ (day := (parts at: 3) asInteger) notNil ] ] ])
+		ifFalse: [
+			Error signal: 'Date invalide (attendu AAAA-MM-JJ) : ' , aString printString ].
+	^ Date year: year month: month day: day
+]
+
+{ #category : 'private' }
 AXPLWebServer >> jsonBodyOf: aRequest [
-	^ NeoJSONReader fromString: aRequest entity contents
+	"NeoJSONReader class >> fromString: parse les clés d'objet JSON en
+	String (propertyNamesAsSymbols vaut false par défaut, vérifié dans la
+	source de NeoJSON) — alors que toutes les routes ci-dessous lisent le
+	corps avec des Symbol (body at: #label, #value...). Sans ce réglage,
+	CHAQUE route POST échouerait avec 'key not found' sur une vraie
+	requête HTTP, masqué en {error: ...} propre par safely: mais jamais
+	fonctionnel."
+	^ (NeoJSONReader on: aRequest entity contents readStream)
+		propertyNamesAsSymbols: true;
+		next
 ]
 
 { #category : 'private' }
@@ -186,16 +221,17 @@ AXPLWebServer >> traceJson [
 { #category : 'private' }
 AXPLWebServer >> writeField: aRequest [
 	"Comme AXPLSpecVisitor : jamais d'écriture sans validation passée
-	(isSatisfiedBy:) — voir la LIMITE CONNUE du commentaire de classe
-	pour les champs Date."
-	| body desc |
+	(isSatisfiedBy:) — et jamais sans coercion du type JSON reçu vers le
+	type Pharo attendu par la description (voir coerceValue:for:)."
+	| body desc value |
 	body := self jsonBodyOf: aRequest.
 	desc := metaContainer children
 		detect: [ :d | d label = (body at: #label) ]
 		ifNone: [ ^ Dictionary new at: #error put: 'Champ inconnu'; yourself ].
-	(desc isSatisfiedBy: (body at: #value))
+	value := self coerceValue: (body at: #value) for: desc.
+	(desc isSatisfiedBy: value)
 		ifTrue: [
-			desc write: (body at: #value) to: targetObject.
+			desc write: value to: targetObject.
 			^ self ok ]
 		ifFalse: [ ^ Dictionary new at: #error put: 'Valeur invalide'; yourself ]
 ]
