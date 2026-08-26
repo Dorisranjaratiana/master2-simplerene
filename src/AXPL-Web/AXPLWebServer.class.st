@@ -14,9 +14,12 @@ Routes :
   POST /psi/remove-field {label}
   GET  /psi/trace                       → historique horodaté Ψ
 
-CORS ouvert (Access-Control-Allow-Origin: *) — pratique pour un
-frontend en développement local (Vite/CRA sur un autre port), à
-resserrer avant tout déploiement réel.
+CORS ouvert (Access-Control-Allow-Origin/Methods/Headers) — pratique
+pour un frontend en développement local (Vite/CRA sur un autre port),
+à resserrer avant tout déploiement réel. Les trois en-têtes sont
+nécessaires : Origin seul ne suffit pas dès qu'une requête POST envoie
+un corps JSON (Content-Type: application/json déclenche un preflight
+OPTIONS que le navigateur bloque sans Allow-Methods/Allow-Headers).
 
 Les champs Date reçus du web arrivent en String JSON (format ISO
 8601 'AAAA-MM-JJ', celui de <input type=date> et de
@@ -181,7 +184,16 @@ AXPLWebServer >> start: aPort [
 		(#debugMode -> true) }.
 	teapot
 		after: '*' -> [ :req :resp |
-			resp headers at: 'Access-Control-Allow-Origin' put: '*' ];
+			"Access-Control-Allow-Origin seul suffit pour une requête CORS
+			'simple' (GET sans en-tête custom), comme /form. Mais POST /field
+			et /psi/* envoient un corps JSON avec Content-Type: application/json,
+			ce qui déclenche un preflight OPTIONS que le navigateur bloque
+			silencieusement sans Allow-Methods/Allow-Headers explicites — le
+			POST semble alors ne rien faire, sans erreur visible côté serveur."
+			resp headers
+				at: 'Access-Control-Allow-Origin' put: '*';
+				at: 'Access-Control-Allow-Methods' put: 'GET, POST, OPTIONS';
+				at: 'Access-Control-Allow-Headers' put: 'Content-Type' ];
 		OPTIONS: '/*' -> [ :req | '' ];
 		GET: '/form' -> [ :req |
 			self safely: [ self formJsonFor: (req at: #level ifAbsent: [ 'simple' ]) asSymbol ] ];
