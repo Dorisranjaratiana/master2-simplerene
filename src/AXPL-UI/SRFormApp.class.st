@@ -367,7 +367,7 @@ SRFormApp >> showTrace [
         ifTrue: [ ^ self inform: 'Aucune intercession enregistrée.' ].
     text := log inject: '' into: [ :acc :each |
         acc , each key printString , ' — ' , each value , String cr ].
-    path := FileLocator workingDirectory / ('axpl-trace-' , DateAndTime now asInteger printString , '.txt').
+    path := FileLocator workingDirectory / ('axpl-trace-' , (DateAndTime now printString copyReplaceAll: ':' with: '-') , '.txt').
     path writeStreamDo: [ :stream | stream nextPutAll: text ].
     self inform: text , String cr , 'Exportée vers : ' , path fullName.
 ]
