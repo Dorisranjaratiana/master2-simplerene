@@ -89,7 +89,7 @@ AXPLHttpServer >> fieldTypeFor: aDescription [
 
 { #category : 'http-handlers' }
 AXPLHttpServer >> formResponseFor: aLevelString [
-	| level builder visible dyn fields |
+	| level builder visible |
 	level := aLevelString asSymbol.
 	builder := AXPLFormBuilder new
 		targetObject: targetObject;
@@ -97,12 +97,9 @@ AXPLHttpServer >> formResponseFor: aLevelString [
 		metaContainer: metaContainer;
 		yourself.
 	visible := builder build.
-	dyn := psiEngine dynamicFields select: [ :f | builder canUserSee: f ].
-	fields := (visible collect: [ :d | self jsonForDescription: d level: level ]) asOrderedCollection.
-	fields addAll: (dyn collect: [ :f | self jsonForDynamicField: f ]).
 	^ Dictionary new
 		at: #type put: 'group';
-		at: #fields put: fields asArray;
+		at: #fields put: (visible collect: [ :d | self jsonForDescription: d level: level ]) asArray;
 		yourself
 ]
 
@@ -113,6 +110,7 @@ AXPLHttpServer >> initialize [
 	metaContainer := targetObject class descriptionForAXPL.
 	psiEngine := AXPLReflexivityEngine new
 		metaContainer: metaContainer;
+		targetClass: targetObject class;
 		yourself.
 ]
 
@@ -132,18 +130,6 @@ AXPLHttpServer >> jsonForDescription: aDescription level: aLevel [
 		at: #options put: ((aDescription isKindOf: SRSingleOptionDescription)
 			ifTrue: [ aDescription options asArray ]
 			ifFalse: [ nil ]);
-		yourself
-]
-
-{ #category : 'private' }
-AXPLHttpServer >> jsonForDynamicField: aField [
-	^ Dictionary new
-		at: #label put: aField label;
-		at: #type put: aField type asString;
-		at: #level put: aField level asString;
-		at: #help put: (aField help ifNil: [ '' ]);
-		at: #value put: (self jsonValue: aField value);
-		at: #options put: (aField type = #select ifTrue: [ aField options asArray ] ifFalse: [ nil ]);
 		yourself
 ]
 
@@ -227,17 +213,12 @@ AXPLHttpServer >> traceLogJson [
 
 { #category : 'http-handlers' }
 AXPLHttpServer >> writeFieldFrom: req [
-	| body label value desc dyn |
+	| body label value desc |
 	body := self jsonBodyOf: req.
 	label := body at: 'label'.
 	value := body at: 'value'.
 	desc := metaContainer children detect: [ :d | d label = label ] ifNone: [ nil ].
-	desc ifNotNil: [
-		desc write: (self coerceValue: value for: desc) to: targetObject.
-		^ Dictionary new at: #ok put: true; yourself ].
-	dyn := psiEngine dynamicFieldNamed: label.
-	dyn ifNotNil: [
-		dyn value: value.
-		^ Dictionary new at: #ok put: true; yourself ].
-	^ Dictionary new at: #error put: 'Champ introuvable : ' , label; yourself
+	desc ifNil: [ ^ Dictionary new at: #error put: 'Champ introuvable : ' , label; yourself ].
+	desc write: (self coerceValue: value for: desc) to: targetObject.
+	^ Dictionary new at: #ok put: true; yourself
 ]

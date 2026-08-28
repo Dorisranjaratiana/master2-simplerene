@@ -50,12 +50,16 @@ Routes :
 | DELETE  | `/field/<label>` | —                                              | `{ok:true}` ou `{error}`        |
 | GET     | `/trace`         | —                                              | `[{timestamp, message}, ...]`   |
 
-Les champs créés via `/field/create` (`AXPLDynamicField`) ne modifient jamais la
-classe métier (`ClientHopital`) : ils portent leur propre valeur en mémoire côté
-serveur, ce qui permet aussi de les supprimer via `DELETE /field/<label>`. Les
-champs natifs (variables d'instance déclarées dans `descriptionForAXPL`) ne
-peuvent être ni créés ni supprimés à chaud, seulement renommés ou changés de
-niveau — cohérent avec `SRFormApp>>updateInterface` (mode Ψ desktop).
+`/field/create` et `DELETE /field/<label>` exploitent une véritable **intercession
+structurelle** Ψ (au sens de Maes, 1987, repris au chapitre 4 du mémoire) : le
+premier ajoute réellement une variable d'instance à la classe métier via
+`#subclass:instanceVariableNames:classVariableNames:package:` puis compile ses
+accesseur/mutateur avec `#compile:` ; Pharo migre automatiquement les instances
+existantes vers la nouvelle forme, sans redémarrage (programmation live). Le
+second effectue l'opération inverse (`#removeSelector:` puis retrait de la
+variable). Seuls les champs ainsi créés par Ψ sont supprimables — les champs
+natifs déclarés dans `descriptionForAXPL` restent protégés, conformément à la
+limite documentée dans le mémoire (section 7.3.5).
 
 ## Architecture
 
