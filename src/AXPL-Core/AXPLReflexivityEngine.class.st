@@ -4,7 +4,9 @@ Implémente les relations ③④⑤ et la traçabilité [t].
 ③ readDescription: — lit une description par son label dans le metaContainer.
 ④ relabelDescription:to: — modifie un label à l'exécution (intercession).
 ⑤ updateExplanation:forLevel:with: — synchronise l'explication après intercession.
-[t] traceLog — historique horodaté de toutes les intercessions (DateAndTime).
+[t] traceLog — historique horodaté de toutes les intercessions (DateAndTime),
+borné à maxTraceEntries pour ne pas croître indéfiniment sur un serveur qui
+tourne longtemps.
 Instance unique créée dans targetObject: — jamais recréée entre les re-rendus.
 
 Étend ④ à une véritable intercession STRUCTURELLE (Maes, 1987) au sens plein du terme :
@@ -15,7 +17,11 @@ Pharo (redéfinition de classe à chaud, migration automatique des instances exi
 programmation live) plutôt que de simuler le champ dans une structure annexe.
 removeField: effectue l'opération inverse : #removeSelector: puis retrait de la variable
 d'instance. Seuls les champs ainsi créés par Ψ (psiCreatedAccessors) peuvent être retirés ;
-les champs natifs déclarés dans descriptionForAXPL restent protégés.""
+les champs natifs déclarés dans descriptionForAXPL restent protégés.
+
+Toute intercession STRUCTURELLE modifie targetClass, un objet global et partagé : les
+opérations sont sérialisées via un Mutex pour rester sûres si le serveur HTTP traite
+plusieurs requêtes en parallèle (un process Zn par connexion).""
 "
 Class {
 	#name : 'AXPLReflexivityEngine',
@@ -24,7 +30,8 @@ Class {
 		'metaContainer',
 		'traceLog',
 		'targetClass',
-		'psiCreatedAccessors'
+		'psiCreatedAccessors',
+		'mutex'
 	],
 	#category : 'AXPL-Core',
 	#package : 'AXPL-Core'
@@ -44,67 +51,69 @@ AXPLReflexivityEngine >> axplTranslit: aCharacter [
 	^ ''
 ]
 
+{ #category : 'accessing' }
+AXPLReflexivityEngine class >> maxTraceEntries [
+	^ 500
+]
+
+{ #category : 'private' }
+AXPLReflexivityEngine >> checkValidLevel: aLevelSymbol [
+	(#(#simple #base #expert) includes: aLevelSymbol) ifFalse: [
+		AXPLInvalidPayloadError signal: 'Niveau inconnu : "' , aLevelSymbol asString , '".' ]
+]
+
 { #category : 'intercession' }
 AXPLReflexivityEngine >> createField: aLabel type: aTypeSymbol level: aLevelSymbol help: aHelpString options: anOptionsCollection [
 	"① Intercession STRUCTURELLE : ajoute une véritable variable d'instance à targetClass
 	et compile ses accesseur/mutateur, puis enregistre la description dans la méta-description.
 	La migration des instances existantes (dont targetObject) est gérée nativement par Pharo."
-	| accessorName newVarNames descClass description priority |
-	(self readDescription: aLabel) ifNotNil: [
-		Error signal: 'Un champ nommé "' , aLabel , '" existe déjà.' ].
+	^ mutex critical: [
+		| accessorName newVarNames descClass description priority |
+		(aLabel isNil or: [ aLabel isEmpty ]) ifTrue: [ AXPLInvalidPayloadError signal: 'Le label est requis.' ].
+		self checkValidLevel: aLevelSymbol.
+		(self readDescription: aLabel) ifNotNil: [
+			AXPLFieldAlreadyExistsError signal: 'Un champ nommé "' , aLabel , '" existe déjà.' ].
 
-	accessorName := self uniqueInstVarNameFor: aLabel.
+		descClass := AXPLFieldTypeRegistry default descriptionClassFor: aTypeSymbol.
+		accessorName := self uniqueInstVarNameFor: aLabel.
 
-	newVarNames := targetClass instVarNames asOrderedCollection.
-	newVarNames add: accessorName.
-	targetClass superclass
-		subclass: targetClass name asSymbol
-		instanceVariableNames: (String streamContents: [ :s |
-			newVarNames
-				do: [ :each | s nextPutAll: each ]
-				separatedBy: [ s nextPut: $  ] ])
-		classVariableNames: ''
-		package: targetClass package name.
+		newVarNames := targetClass instVarNames asOrderedCollection.
+		newVarNames add: accessorName.
+		targetClass superclass
+			subclass: targetClass name asSymbol
+			instanceVariableNames: (String streamContents: [ :s |
+				newVarNames
+					do: [ :each | s nextPutAll: each ]
+					separatedBy: [ s nextPut: $  ] ])
+			classVariableNames: ''
+			package: targetClass package name.
 
-	targetClass compile: accessorName , String lf , '^ ' , accessorName.
-	targetClass compile: accessorName , ': aValue' , String lf , accessorName , ' := aValue'.
+		targetClass compile: accessorName , String lf , '^ ' , accessorName.
+		targetClass compile: accessorName , ': aValue' , String lf , accessorName , ' := aValue'.
 
-	descClass := self descriptionClassFor: aTypeSymbol.
-	priority := metaContainer isEmpty
-		ifTrue: [ 10 ]
-		ifFalse: [ (metaContainer children collect: [ :d | d priority ]) max + 10 ].
-	description := descClass new
-		label: aLabel;
-		accessor: accessorName asSymbol;
-		priority: priority;
-		level: aLevelSymbol;
-		comment: (Dictionary new
-			at: #simple put: aHelpString;
-			at: #base put: aHelpString;
-			at: #expert put: aHelpString;
-			yourself);
-		yourself.
-	aTypeSymbol = #select ifTrue: [ description options: anOptionsCollection asArray ].
+		priority := metaContainer isEmpty
+			ifTrue: [ 10 ]
+			ifFalse: [ (metaContainer children collect: [ :d | d priority ]) max + 10 ].
+		description := descClass new
+			label: aLabel;
+			accessor: accessorName asSymbol;
+			priority: priority;
+			level: aLevelSymbol;
+			comment: (Dictionary new
+				at: #simple put: aHelpString;
+				at: #base put: aHelpString;
+				at: #expert put: aHelpString;
+				yourself);
+			yourself.
+		aTypeSymbol = #select ifTrue: [ description options: anOptionsCollection asArray ].
 
-	metaContainer add: description.
-	psiCreatedAccessors add: accessorName asSymbol.
+		metaContainer add: description.
+		psiCreatedAccessors add: accessorName asSymbol.
 
-	traceLog add: (Association
-		key: DateAndTime now
-		value: 'Create (Ψ intercession structurelle) : "' , aLabel
+		self logIntercession: 'Create (Ψ intercession structurelle) : "' , aLabel
 			, '" → nouvelle variable d''instance #' , accessorName
 			, ' sur ' , targetClass name
-			, ' (' , aTypeSymbol asString , ', niveau #' , aLevelSymbol asString , ')').
-]
-
-{ #category : 'private' }
-AXPLReflexivityEngine >> descriptionClassFor: aTypeSymbol [
-	aTypeSymbol = #string ifTrue: [ ^ SRStringDescription ].
-	aTypeSymbol = #number ifTrue: [ ^ SRNumberDescription ].
-	aTypeSymbol = #boolean ifTrue: [ ^ SRBooleanDescription ].
-	aTypeSymbol = #date ifTrue: [ ^ SRDateDescription ].
-	aTypeSymbol = #select ifTrue: [ ^ SRSingleOptionDescription ].
-	^ SRStringDescription
+			, ' (' , aTypeSymbol asString , ', niveau #' , aLevelSymbol asString , ')' ]
 ]
 
 { #category : 'initialization' }
@@ -112,6 +121,7 @@ AXPLReflexivityEngine >> initialize [
     super initialize.
     traceLog := OrderedCollection new.
     psiCreatedAccessors := Set new.
+    mutex := Mutex new.
 ]
 
 { #category : 'private' }
@@ -144,6 +154,12 @@ AXPLReflexivityEngine >> instVarNameFrom: aLabel [
 	^ result contents
 ]
 
+{ #category : 'private' }
+AXPLReflexivityEngine >> logIntercession: aString [
+	traceLog add: (Association key: DateAndTime now value: aString).
+	[ traceLog size > self class maxTraceEntries ] whileTrue: [ traceLog removeFirst ].
+]
+
 { #category : 'accessing' }
 AXPLReflexivityEngine >> metaContainer: aContainer [
     metaContainer := aContainer
@@ -159,17 +175,16 @@ AXPLReflexivityEngine >> readDescription: aLabel [
 { #category : 'intercession' }
 AXPLReflexivityEngine >> relabelDescription: oldLabel to: newLabel [
 	| desc |
+	(newLabel isNil or: [ newLabel isEmpty ]) ifTrue: [ AXPLInvalidPayloadError signal: 'Le nouveau label est requis.' ].
 	desc := self readDescription: oldLabel.
-	desc ifNil: [ Error signal: 'Champ introuvable : "' , oldLabel , '".' ].
+	desc ifNil: [ AXPLFieldNotFoundError signal: 'Champ introuvable : "' , oldLabel , '".' ].
 	desc label: newLabel.
 	desc comment: (
 		'Champ : ' , newLabel
 		, ' | Niveau : ' , desc level asString
 		, ' | Modifié par Ψ le : ' , DateAndTime now printString
 		, ' | Ancien label : ' , oldLabel).
-	traceLog add: (Association
-		key: DateAndTime now
-		value: ('Rename: ' , oldLabel , ' → ' , newLabel)).
+	self logIntercession: 'Rename: ' , oldLabel , ' → ' , newLabel.
 ]
 
 { #category : 'intercession' }
@@ -177,45 +192,43 @@ AXPLReflexivityEngine >> removeField: aLabel [
 	"Intercession STRUCTURELLE inverse de createField: : retire les accesseurs compilés
 	puis la variable d'instance elle-même. Seuls les champs créés par Ψ sont éligibles ;
 	les champs natifs (déclarés dans descriptionForAXPL) restent protégés."
-	| desc accessorSym remainingVars |
-	desc := self readDescription: aLabel.
-	desc ifNil: [ Error signal: 'Champ introuvable : "' , aLabel , '".' ].
-	accessorSym := desc accessor.
-	(psiCreatedAccessors includes: accessorSym) ifFalse: [
-		Error signal: 'Impossible de supprimer un champ natif du dossier : "' , aLabel , '".' ].
+	^ mutex critical: [
+		| desc accessorSym remainingVars |
+		desc := self readDescription: aLabel.
+		desc ifNil: [ AXPLFieldNotFoundError signal: 'Champ introuvable : "' , aLabel , '".' ].
+		accessorSym := desc accessor.
+		(psiCreatedAccessors includes: accessorSym) ifFalse: [
+			AXPLFieldProtectedError signal: 'Impossible de supprimer un champ natif du dossier : "' , aLabel , '".' ].
 
-	metaContainer remove: desc.
+		metaContainer remove: desc.
 
-	remainingVars := targetClass instVarNames reject: [ :each | each = accessorSym asString ].
-	targetClass superclass
-		subclass: targetClass name asSymbol
-		instanceVariableNames: (String streamContents: [ :s |
-			remainingVars
-				do: [ :each | s nextPutAll: each ]
-				separatedBy: [ s nextPut: $  ] ])
-		classVariableNames: ''
-		package: targetClass package name.
+		remainingVars := targetClass instVarNames reject: [ :each | each = accessorSym asString ].
+		targetClass superclass
+			subclass: targetClass name asSymbol
+			instanceVariableNames: (String streamContents: [ :s |
+				remainingVars
+					do: [ :each | s nextPutAll: each ]
+					separatedBy: [ s nextPut: $  ] ])
+			classVariableNames: ''
+			package: targetClass package name.
 
-	targetClass removeSelector: accessorSym.
-	targetClass removeSelector: accessorSym asMutator.
-	psiCreatedAccessors remove: accessorSym.
+		targetClass removeSelector: accessorSym.
+		targetClass removeSelector: accessorSym asMutator.
+		psiCreatedAccessors remove: accessorSym.
 
-	traceLog add: (Association
-		key: DateAndTime now
-		value: 'Remove (Ψ intercession structurelle) : "' , aLabel
+		self logIntercession: 'Remove (Ψ intercession structurelle) : "' , aLabel
 			, '" → suppression de la variable d''instance #' , accessorSym
-			, ' et de ses accesseurs sur ' , targetClass name).
+			, ' et de ses accesseurs sur ' , targetClass name ]
 ]
 
 { #category : 'initialization' }
 AXPLReflexivityEngine >> setLevel: aNewLevel ofDescription: aLabel [
 	| desc |
+	self checkValidLevel: aNewLevel.
 	desc := self readDescription: aLabel.
-	desc ifNil: [ Error signal: 'Champ introuvable : "' , aLabel , '".' ].
+	desc ifNil: [ AXPLFieldNotFoundError signal: 'Champ introuvable : "' , aLabel , '".' ].
 	desc level: aNewLevel.
-	traceLog add: (Association
-		key: DateAndTime now
-		value: 'Level: ' , aLabel , ' → ' , aNewLevel asString).
+	self logIntercession: 'Level: ' , aLabel , ' → ' , aNewLevel asString.
 ]
 
 { #category : 'accessing' }

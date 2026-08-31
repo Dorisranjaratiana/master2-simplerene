@@ -99,6 +99,34 @@ AXPLTest >> testSynchronisationExplication [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testDomainDiscovery [
+	"Recommandation 2 — le registre de domaines découvre par réflexion toute classe
+	qui implémente #descriptionForAXPL, sans qu'aucun nom de classe métier soit câblé
+	en dur dans le framework."
+	| discovered keys |
+	discovered := AXPLDomainRegistry discover.
+	keys := discovered domains collect: [ :d | d key ].
+	self assert: (keys includes: 'ClientHopital').
+	self assert: (keys includes: 'Etudiant').
+	self assert: (discovered at: 'ClientHopital') label equals: container label.
+]
+
+{ #category : 'tests' }
+AXPLTest >> testFieldTypeRegistryDefaults [
+	"Recommandation 4 — les cinq types de champs de base sont enregistrés et
+	résolubles dans les deux sens (symbole → classe, classe → symbole)."
+	| registry |
+	registry := AXPLFieldTypeRegistry default.
+	self assert: (registry descriptionClassFor: #string) equals: SRStringDescription.
+	self assert: (registry descriptionClassFor: #number) equals: SRNumberDescription.
+	self assert: (registry descriptionClassFor: #boolean) equals: SRBooleanDescription.
+	self assert: (registry descriptionClassFor: #date) equals: SRDateDescription.
+	self assert: (registry descriptionClassFor: #select) equals: SRSingleOptionDescription.
+	self assert: (registry typeNameFor: container children first) equals: 'string'.
+	self should: [ registry descriptionClassFor: #inconnu ] raise: AXPLInvalidPayloadError.
+]
+
+{ #category : 'tests' }
 AXPLTest >> testTracabilite [
 	 "[t] — Chaque intercession est horodatée dans le traceLog"
 

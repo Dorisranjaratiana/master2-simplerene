@@ -1,28 +1,37 @@
 "
 ""Sert le framework AXPL en HTTP/JSON via Teapot, pour un frontend web (ex: React)
 qui ne peut pas piloter directement les objets Pharo comme le fait SRFormApp.
-Expose la même logique que SRFormApp>>updateInterface (filtrage ①, explicabilité ②,
-intercession Ψ ④, traçabilité [t]) sous forme de routes REST/JSON :
 
-  GET    /form?level=simple|base|expert   -> AXPLForm { type, fields }
-  POST   /field        {label, value}     -> AXPLResult
-  POST   /field/rename {oldLabel,newLabel}-> AXPLResult
-  POST   /field/level  {label, level}     -> AXPLResult
-  POST   /field/create {label,type,level,help,options} -> AXPLResult
-  DELETE /field/<label>                   -> AXPLResult
-  GET    /trace                           -> [{timestamp, message}]
+Neutre par construction : ne référence AUCUNE classe métier concrète. Les domaines
+disponibles sont découverts par réflexion (AXPLDomainRegistry discover) au démarrage
+— toute classe qui implémente #descriptionForAXPL devient automatiquement adressable,
+sans modifier ce fichier.
 
-Un unique targetObject (ClientHopital) est gardé en mémoire pour toute la durée
-de vie du serveur, comme SRFormApp>>targetObject: le fait pour la fenêtre desktop.""
+Contrat v1 (voir README) :
+  GET    /health
+  GET    /api/v1/domains
+  GET    /api/v1/domains/<domain>/form?level=simple|base|expert
+  GET    /api/v1/domains/<domain>/trace
+  GET    /api/v1/domains/<domain>/fields/<label>
+  POST   /api/v1/domains/<domain>/fields                    {label,type,level,help,options}
+  POST   /api/v1/domains/<domain>/fields/<label>/value      {value}
+  POST   /api/v1/domains/<domain>/fields/<label>/rename     {newLabel}
+  POST   /api/v1/domains/<domain>/fields/<label>/level      {level}
+  DELETE /api/v1/domains/<domain>/fields/<label>
+
+Toute erreur applicative (AXPLApiError et sous-classes) produit un statut HTTP
+et un corps {error:{code,message}} cohérents, plutôt qu'un systématique 200.
+Une AXPLDomainSession par domaine découvert, créée à la demande et mise en cache
+— chaque domaine a son propre targetObject/metaContainer/psiEngine, isolé des autres.""
 "
 Class {
 	#name : 'AXPLHttpServer',
 	#superclass : 'Object',
 	#instVars : [
 		'teapot',
-		'targetObject',
-		'metaContainer',
-		'psiEngine'
+		'registry',
+		'sessions',
+		'fieldTypes'
 	],
 	#classInstVars : [
 		'default'
@@ -47,6 +56,19 @@ AXPLHttpServer class >> stop [
 ]
 
 { #category : 'private' }
+AXPLHttpServer >> apiErrorResponse: ex [
+	^ TeaResponse new
+		code: (self httpStatusFor: ex class);
+		body: (Dictionary new
+			at: #error put: (Dictionary new
+				at: #code put: ex class code asString;
+				at: #message put: ex messageText;
+				yourself);
+			yourself);
+		yourself
+]
+
+{ #category : 'private' }
 AXPLHttpServer >> coerceValue: aValue for: aDescription [
 	(aDescription isKindOf: SRDateDescription) ifTrue: [
 		^ (aValue isString and: [ aValue isNotEmpty ])
@@ -56,19 +78,17 @@ AXPLHttpServer >> coerceValue: aValue for: aDescription [
 ]
 
 { #category : 'http-handlers' }
-AXPLHttpServer >> createFieldFrom: req [
-	| body |
+AXPLHttpServer >> createFieldFor: aDomainKey from: req [
+	| session body |
+	session := self sessionFor: aDomainKey.
 	body := self jsonBodyOf: req.
-	^ [
-		psiEngine
-			createField: (body at: 'label')
-			type: (body at: 'type') asSymbol
-			level: (body at: 'level') asSymbol
-			help: (body at: 'help' ifAbsent: [ '' ])
-			options: (body at: 'options' ifAbsent: [ #() ]).
-		Dictionary new at: #ok put: true; yourself ]
-		on: Error
-		do: [ :e | Dictionary new at: #error put: e messageText; yourself ]
+	session psiEngine
+		createField: (body at: 'label' ifAbsent: [ nil ])
+		type: (body at: 'type' ifAbsent: [ AXPLInvalidPayloadError signal: 'Le type est requis.' ]) asSymbol
+		level: (body at: 'level' ifAbsent: [ AXPLInvalidPayloadError signal: 'Le niveau est requis.' ]) asSymbol
+		help: (body at: 'help' ifAbsent: [ '' ])
+		options: (body at: 'options' ifAbsent: [ #() ]).
+	^ Dictionary new at: #ok put: true; yourself
 ]
 
 { #category : 'private' }
@@ -78,40 +98,58 @@ AXPLHttpServer >> dateFromISOString: aString [
 	^ Date year: parts first asNumber month: parts second asNumber day: parts third asNumber
 ]
 
-{ #category : 'private' }
-AXPLHttpServer >> fieldTypeFor: aDescription [
-	(aDescription isKindOf: SRBooleanDescription) ifTrue: [ ^ 'boolean' ].
-	(aDescription isKindOf: SRNumberDescription) ifTrue: [ ^ 'number' ].
-	(aDescription isKindOf: SRDateDescription) ifTrue: [ ^ 'date' ].
-	(aDescription isKindOf: SRSingleOptionDescription) ifTrue: [ ^ 'select' ].
-	^ 'string'
+{ #category : 'http-handlers' }
+AXPLHttpServer >> domainsJson [
+	^ Dictionary new
+		at: #domains put: (registry domains collect: [ :d |
+			Dictionary new at: #key put: d key; at: #label put: d label; yourself ]) asArray;
+		yourself
 ]
 
 { #category : 'http-handlers' }
-AXPLHttpServer >> formResponseFor: aLevelString [
-	| level builder visible |
+AXPLHttpServer >> fieldJsonFor: aDomainKey label: aLabel [
+	| session desc |
+	session := self sessionFor: aDomainKey.
+	desc := session metaContainer children
+		detect: [ :d | d label = aLabel ]
+		ifNone: [ AXPLFieldNotFoundError signal: 'Champ introuvable : "' , aLabel , '".' ].
+	^ self jsonForDescription: desc level: #expert targetObject: session targetObject
+]
+
+{ #category : 'http-handlers' }
+AXPLHttpServer >> formResponseFor: aDomainKey level: aLevelString [
+	| session level builder visible |
+	session := self sessionFor: aDomainKey.
 	level := aLevelString asSymbol.
 	builder := AXPLFormBuilder new
-		targetObject: targetObject;
+		targetObject: session targetObject;
 		userLevel: level;
-		metaContainer: metaContainer;
+		metaContainer: session metaContainer;
 		yourself.
 	visible := builder build.
 	^ Dictionary new
 		at: #type put: 'group';
-		at: #fields put: (visible collect: [ :d | self jsonForDescription: d level: level ]) asArray;
+		at: #label put: session metaContainer label;
+		at: #fields put: (visible collect: [ :d | self jsonForDescription: d level: level targetObject: session targetObject ]) asArray;
 		yourself
+]
+
+{ #category : 'private' }
+AXPLHttpServer >> httpStatusFor: anExceptionClass [
+	anExceptionClass = AXPLFieldNotFoundError ifTrue: [ ^ 404 ].
+	anExceptionClass = AXPLDomainNotFoundError ifTrue: [ ^ 404 ].
+	anExceptionClass = AXPLFieldAlreadyExistsError ifTrue: [ ^ 409 ].
+	anExceptionClass = AXPLFieldProtectedError ifTrue: [ ^ 403 ].
+	anExceptionClass = AXPLInvalidPayloadError ifTrue: [ ^ 400 ].
+	^ 500
 ]
 
 { #category : 'initialization' }
 AXPLHttpServer >> initialize [
 	super initialize.
-	targetObject := ClientHopital new.
-	metaContainer := targetObject class descriptionForAXPL.
-	psiEngine := AXPLReflexivityEngine new
-		metaContainer: metaContainer;
-		targetClass: targetObject class;
-		yourself.
+	registry := AXPLDomainRegistry discover.
+	fieldTypes := AXPLFieldTypeRegistry default.
+	sessions := Dictionary new.
 ]
 
 { #category : 'private' }
@@ -120,13 +158,13 @@ AXPLHttpServer >> jsonBodyOf: req [
 ]
 
 { #category : 'private' }
-AXPLHttpServer >> jsonForDescription: aDescription level: aLevel [
+AXPLHttpServer >> jsonForDescription: aDescription level: aLevel targetObject: aTargetObject [
 	^ Dictionary new
 		at: #label put: aDescription label;
-		at: #type put: (self fieldTypeFor: aDescription);
+		at: #type put: (fieldTypes typeNameFor: aDescription);
 		at: #level put: aDescription level asString;
 		at: #help put: (aDescription commentFor: aLevel);
-		at: #value put: (self jsonValue: (aDescription read: targetObject));
+		at: #value put: (self jsonValue: (aDescription read: aTargetObject));
 		at: #options put: ((aDescription isKindOf: SRSingleOptionDescription)
 			ifTrue: [ aDescription options asArray ]
 			ifFalse: [ nil ]);
@@ -144,34 +182,33 @@ AXPLHttpServer >> jsonValue: aValue [
 ]
 
 { #category : 'http-handlers' }
-AXPLHttpServer >> removeFieldNamed: aLabel [
-	^ [
-		psiEngine removeField: aLabel.
-		Dictionary new at: #ok put: true; yourself ]
-		on: Error
-		do: [ :e | Dictionary new at: #error put: e messageText; yourself ]
+AXPLHttpServer >> removeFieldFor: aDomainKey label: aLabel [
+	(self sessionFor: aDomainKey) psiEngine removeField: aLabel.
+	^ Dictionary new at: #ok put: true; yourself
 ]
 
 { #category : 'http-handlers' }
-AXPLHttpServer >> renameFieldFrom: req [
-	| body |
+AXPLHttpServer >> renameFieldFor: aDomainKey label: aLabel from: req [
+	| session body |
+	session := self sessionFor: aDomainKey.
 	body := self jsonBodyOf: req.
-	^ [
-		psiEngine relabelDescription: (body at: 'oldLabel') to: (body at: 'newLabel').
-		Dictionary new at: #ok put: true; yourself ]
-		on: Error
-		do: [ :e | Dictionary new at: #error put: e messageText; yourself ]
+	session psiEngine relabelDescription: aLabel to: (body at: 'newLabel' ifAbsent: [ nil ]).
+	^ Dictionary new at: #ok put: true; yourself
+]
+
+{ #category : 'private' }
+AXPLHttpServer >> sessionFor: aDomainKey [
+	^ sessions at: aDomainKey ifAbsentPut: [
+		AXPLDomainSession new initializeFor: (registry at: aDomainKey); yourself ]
 ]
 
 { #category : 'http-handlers' }
-AXPLHttpServer >> setLevelFrom: req [
-	| body |
+AXPLHttpServer >> setLevelFor: aDomainKey label: aLabel from: req [
+	| session body |
+	session := self sessionFor: aDomainKey.
 	body := self jsonBodyOf: req.
-	^ [
-		psiEngine setLevel: (body at: 'level') asSymbol ofDescription: (body at: 'label').
-		Dictionary new at: #ok put: true; yourself ]
-		on: Error
-		do: [ :e | Dictionary new at: #error put: e messageText; yourself ]
+	session psiEngine setLevel: (body at: 'level' ifAbsent: [ AXPLInvalidPayloadError signal: 'Le niveau est requis.' ]) asSymbol ofDescription: aLabel.
+	^ Dictionary new at: #ok put: true; yourself
 ]
 
 { #category : 'starting' }
@@ -180,20 +217,28 @@ AXPLHttpServer >> start [
 		#port -> 8080.
 		#defaultOutput -> #json }.
 	teapot
-		GET: '/form' -> [ :req | self formResponseFor: (req at: #level ifAbsent: [ 'simple' ]) ];
-		POST: '/field' -> [ :req | self writeFieldFrom: req ];
-		POST: '/field/rename' -> [ :req | self renameFieldFrom: req ];
-		POST: '/field/level' -> [ :req | self setLevelFrom: req ];
-		POST: '/field/create' -> [ :req | self createFieldFrom: req ];
-		DELETE: '/field/<label>' -> [ :req | self removeFieldNamed: (req at: #label) ];
-		GET: '/trace' -> [ :req | self traceLogJson ];
+		GET: '/health' -> [ :req | Dictionary new at: #status put: 'ok'; yourself ];
+		GET: '/api/v1/domains' -> [ :req | self domainsJson ];
+		GET: '/api/v1/domains/<domain>/form' -> [ :req | self formResponseFor: (req at: #domain) level: (req at: #level ifAbsent: [ 'simple' ]) ];
+		GET: '/api/v1/domains/<domain>/trace' -> [ :req | self traceLogJsonFor: (req at: #domain) ];
+		GET: '/api/v1/domains/<domain>/fields/<label>' -> [ :req | self fieldJsonFor: (req at: #domain) label: (req at: #label) ];
+		POST: '/api/v1/domains/<domain>/fields' -> [ :req | self createFieldFor: (req at: #domain) from: req ];
+		POST: '/api/v1/domains/<domain>/fields/<label>/value' -> [ :req | self writeFieldFor: (req at: #domain) label: (req at: #label) from: req ];
+		POST: '/api/v1/domains/<domain>/fields/<label>/rename' -> [ :req | self renameFieldFor: (req at: #domain) label: (req at: #label) from: req ];
+		POST: '/api/v1/domains/<domain>/fields/<label>/level' -> [ :req | self setLevelFor: (req at: #domain) label: (req at: #label) from: req ];
+		DELETE: '/api/v1/domains/<domain>/fields/<label>' -> [ :req | self removeFieldFor: (req at: #domain) label: (req at: #label) ];
 		OPTIONS: '/*' -> [ :req | TeaResponse ok ];
 		after: '/*' -> [ :req :resp |
 			resp headers
 				at: 'Access-Control-Allow-Origin' put: '*';
 				at: 'Access-Control-Allow-Methods' put: 'GET, POST, DELETE, OPTIONS';
 				at: 'Access-Control-Allow-Headers' put: 'Content-Type' ];
-		exception: Error -> [ :ex :req | Dictionary new at: #error put: ex messageText; yourself ];
+		exception: AXPLApiError -> [ :ex :req | self apiErrorResponse: ex ];
+		exception: Error -> [ :ex :req |
+			Transcript showCr: 'AXPL-HTTP erreur interne : ' , ex messageText.
+			TeaResponse new code: 500; body: (Dictionary new
+				at: #error put: (Dictionary new at: #code put: 'INTERNAL_ERROR'; at: #message put: ex messageText; yourself);
+				yourself); yourself ];
 		start.
 ]
 
@@ -203,8 +248,8 @@ AXPLHttpServer >> stop [
 ]
 
 { #category : 'http-handlers' }
-AXPLHttpServer >> traceLogJson [
-	^ (psiEngine traceLog collect: [ :assoc |
+AXPLHttpServer >> traceLogJsonFor: aDomainKey [
+	^ ((self sessionFor: aDomainKey) psiEngine traceLog collect: [ :assoc |
 		Dictionary new
 			at: #timestamp put: assoc key asString;
 			at: #message put: assoc value;
@@ -212,13 +257,13 @@ AXPLHttpServer >> traceLogJson [
 ]
 
 { #category : 'http-handlers' }
-AXPLHttpServer >> writeFieldFrom: req [
-	| body label value desc |
+AXPLHttpServer >> writeFieldFor: aDomainKey label: aLabel from: req [
+	| session body desc |
+	session := self sessionFor: aDomainKey.
 	body := self jsonBodyOf: req.
-	label := body at: 'label'.
-	value := body at: 'value'.
-	desc := metaContainer children detect: [ :d | d label = label ] ifNone: [ nil ].
-	desc ifNil: [ ^ Dictionary new at: #error put: 'Champ introuvable : ' , label; yourself ].
-	desc write: (self coerceValue: value for: desc) to: targetObject.
+	desc := session metaContainer children
+		detect: [ :d | d label = aLabel ]
+		ifNone: [ AXPLFieldNotFoundError signal: 'Champ introuvable : "' , aLabel , '".' ].
+	desc write: (self coerceValue: (body at: 'value' ifAbsent: [ nil ]) for: desc) to: session targetObject.
 	^ Dictionary new at: #ok put: true; yourself
 ]

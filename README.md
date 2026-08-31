@@ -38,28 +38,46 @@ AXPLHttpServer start.
 AXPLHttpServer stop.
 ```
 
-Routes :
+Le serveur ne connaît **aucune classe métier concrète**. Au démarrage,
+`AXPLDomainRegistry discover` scanne l'image et enregistre automatiquement toute
+classe qui implémente `descriptionForAXPL` (ClientHopital, Etudiant, et n'importe
+quel futur domaine) — ajouter un domaine ne modifie donc jamais ce package.
+Chaque domaine obtient sa propre session (`targetObject`/`metaContainer`/`psiEngine`),
+créée à la demande et isolée des autres.
 
-| Méthode | Route            | Corps JSON                                   | Réponse                        |
-|---------|------------------|-----------------------------------------------|---------------------------------|
-| GET     | `/form?level=`   | —                                              | `{ type, fields: [...] }`       |
-| POST    | `/field`         | `{label, value}`                              | `{ok:true}` ou `{error}`        |
-| POST    | `/field/rename`  | `{oldLabel, newLabel}`                        | `{ok:true}` ou `{error}`        |
-| POST    | `/field/level`   | `{label, level}`                              | `{ok:true}` ou `{error}`        |
-| POST    | `/field/create`  | `{label, type, level, help, options?}`        | `{ok:true}` ou `{error}`        |
-| DELETE  | `/field/<label>` | —                                              | `{ok:true}` ou `{error}`        |
-| GET     | `/trace`         | —                                              | `[{timestamp, message}, ...]`   |
+### Contrat v1
 
-`/field/create` et `DELETE /field/<label>` exploitent une véritable **intercession
-structurelle** Ψ (au sens de Maes, 1987, repris au chapitre 4 du mémoire) : le
-premier ajoute réellement une variable d'instance à la classe métier via
-`#subclass:instanceVariableNames:classVariableNames:package:` puis compile ses
-accesseur/mutateur avec `#compile:` ; Pharo migre automatiquement les instances
-existantes vers la nouvelle forme, sans redémarrage (programmation live). Le
-second effectue l'opération inverse (`#removeSelector:` puis retrait de la
-variable). Seuls les champs ainsi créés par Ψ sont supprimables — les champs
+| Méthode | Route                                              | Corps JSON            | Réponse                          |
+|---------|-----------------------------------------------------|------------------------|-----------------------------------|
+| GET     | `/health`                                           | —                      | `{status:"ok"}`                  |
+| GET     | `/api/v1/domains`                                   | —                      | `{domains:[{key,label}]}`        |
+| GET     | `/api/v1/domains/<domain>/form?level=`               | —                      | `{type,label,fields:[...]}`      |
+| GET     | `/api/v1/domains/<domain>/fields/<label>`            | —                      | champ unique                     |
+| POST    | `/api/v1/domains/<domain>/fields`                    | `{label,type,level,help,options?}` | `{ok:true}`          |
+| POST    | `/api/v1/domains/<domain>/fields/<label>/value`      | `{value}`              | `{ok:true}`                      |
+| POST    | `/api/v1/domains/<domain>/fields/<label>/rename`     | `{newLabel}`           | `{ok:true}`                      |
+| POST    | `/api/v1/domains/<domain>/fields/<label>/level`      | `{level}`              | `{ok:true}`                      |
+| DELETE  | `/api/v1/domains/<domain>/fields/<label>`            | —                      | `{ok:true}`                      |
+| GET     | `/api/v1/domains/<domain>/trace`                     | —                      | `[{timestamp,message}]`          |
+
+Toute erreur applicative répond avec un statut HTTP correct (404/409/403/400/500)
+et un corps uniforme `{error:{code,message}}` — `code` est un identifiant stable
+(`FIELD_NOT_FOUND`, `FIELD_ALREADY_EXISTS`, `FIELD_PROTECTED`, `INVALID_PAYLOAD`,
+`DOMAIN_NOT_FOUND`, `INTERNAL_ERROR`) pensé pour être testé par un client, pas
+parsé comme du texte. Voir `AXPLApiError` et ses sous-classes dans `AXPL-Core`.
+
+Les créations/suppressions de champs (`POST .../fields`, `DELETE .../fields/<label>`)
+exploitent une véritable **intercession structurelle** Ψ (au sens de Maes, 1987,
+repris au chapitre 4 du mémoire) : la création ajoute réellement une variable
+d'instance à la classe métier via `#subclass:instanceVariableNames:classVariableNames:package:`
+puis compile ses accesseur/mutateur avec `#compile:` ; Pharo migre automatiquement
+les instances existantes vers la nouvelle forme, sans redémarrage (programmation
+live). La suppression effectue l'opération inverse (`#removeSelector:` puis retrait
+de la variable). Seuls les champs ainsi créés par Ψ sont supprimables — les champs
 natifs déclarés dans `descriptionForAXPL` restent protégés, conformément à la
-limite documentée dans le mémoire (section 7.3.5).
+limite documentée dans le mémoire (section 7.3.5). Ces opérations modifiant une
+classe globale et partagée, elles sont sérialisées par un `Mutex` dans
+`AXPLReflexivityEngine` pour rester sûres sous requêtes concurrentes.
 
 ## Architecture
 
@@ -73,10 +91,11 @@ Le framework intègre nativement quatre dimensions autour d'une méta-descriptio
 ## Packages
 
 - `AXPL-Descriptions` — Extension du vrai [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (niveau #simple/#base/#expert, explicabilité graduée)
-- `AXPL-Core` — Moteurs A et Ψ
+- `AXPL-Core` — Moteurs A et Ψ, registre de domaines (`AXPLDomainRegistry`), registre
+  de types de champs (`AXPLFieldTypeRegistry`), hiérarchie d'erreurs (`AXPLApiError`)
 - `AXPL-UI` — Interface L
-- `AXPL-HTTP` — Serveur Teapot/JSON pour un frontend web
-- `AXPL-Tests` — 8 tests unitaires
+- `AXPL-HTTP` — Serveur Teapot/JSON pour un frontend web, neutre vis-à-vis du domaine
+- `AXPL-Tests` — 10 tests unitaires
 
 ## Dépendance
 
