@@ -55,7 +55,7 @@ AXPLReflexivityEngine >> createField: aLabel type: aTypeSymbol level: aLevelSymb
 
 	accessorName := self uniqueInstVarNameFor: aLabel.
 
-	newVarNames := targetClass instanceVariableNames asOrderedCollection.
+	newVarNames := targetClass instVarNames asOrderedCollection.
 	newVarNames add: accessorName.
 	targetClass superclass
 		subclass: targetClass name asSymbol
@@ -186,7 +186,7 @@ AXPLReflexivityEngine >> removeField: aLabel [
 
 	metaContainer remove: desc.
 
-	remainingVars := targetClass instanceVariableNames reject: [ :each | each = accessorSym asString ].
+	remainingVars := targetClass instVarNames reject: [ :each | each = accessorSym asString ].
 	targetClass superclass
 		subclass: targetClass name asSymbol
 		instanceVariableNames: (String streamContents: [ :s |
