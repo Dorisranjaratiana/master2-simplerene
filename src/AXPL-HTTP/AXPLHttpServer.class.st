@@ -18,6 +18,7 @@ Contrat v1 (voir README) :
   POST   /api/v1/domains/<domain>/fields/<label>/rename     {newLabel}
   POST   /api/v1/domains/<domain>/fields/<label>/level      {level}
   DELETE /api/v1/domains/<domain>/fields/<label>
+  POST   /api/v1/domains/<domain>/reset
 
 Toute erreur applicative (AXPLApiError et sous-classes) produit un statut HTTP
 et un corps {error:{code,message}} cohérents, plutôt qu'un systématique 200.
@@ -34,11 +35,24 @@ Class {
 		'fieldTypes'
 	],
 	#classInstVars : [
-		'default'
+		'default',
+		'allowedOrigin'
 	],
 	#category : 'AXPL-HTTP',
 	#package : 'AXPL-HTTP'
 }
+
+{ #category : 'accessing' }
+AXPLHttpServer class >> allowedOrigin [
+	"Origine CORS autorisée. '*' convient en développement local ; restreindre à
+	l'origine exacte du frontend (#allowedOrigin:) avant tout déploiement public."
+	^ allowedOrigin ifNil: [ '*' ]
+]
+
+{ #category : 'accessing' }
+AXPLHttpServer class >> allowedOrigin: aString [
+	allowedOrigin := aString
+]
 
 { #category : 'accessing' }
 AXPLHttpServer class >> default [
@@ -203,6 +217,17 @@ AXPLHttpServer >> sessionFor: aDomainKey [
 ]
 
 { #category : 'http-handlers' }
+AXPLHttpServer >> resetDomain: aDomainKey [
+	"Rejette la session en cache pour ce domaine ; le prochain accès en recrée une
+	fraîche via #sessionFor:. Utile pour rejouer une démo sans redémarrer le serveur.
+	Vérifie d'abord que le domaine existe, pour renvoyer DOMAIN_NOT_FOUND plutôt
+	que de réinitialiser silencieusement une clé inconnue."
+	registry at: aDomainKey.
+	sessions removeKey: aDomainKey ifAbsent: [ nil ].
+	^ Dictionary new at: #ok put: true; yourself
+]
+
+{ #category : 'http-handlers' }
 AXPLHttpServer >> setLevelFor: aDomainKey label: aLabel from: req [
 	| session body |
 	session := self sessionFor: aDomainKey.
@@ -227,10 +252,11 @@ AXPLHttpServer >> start [
 		POST: '/api/v1/domains/<domain>/fields/<label>/rename' -> [ :req | self renameFieldFor: (req at: #domain) label: (req at: #label) from: req ];
 		POST: '/api/v1/domains/<domain>/fields/<label>/level' -> [ :req | self setLevelFor: (req at: #domain) label: (req at: #label) from: req ];
 		DELETE: '/api/v1/domains/<domain>/fields/<label>' -> [ :req | self removeFieldFor: (req at: #domain) label: (req at: #label) ];
+		POST: '/api/v1/domains/<domain>/reset' -> [ :req | self resetDomain: (req at: #domain) ];
 		OPTIONS: '/*' -> [ :req | TeaResponse ok ];
 		after: '/*' -> [ :req :resp |
 			resp headers
-				at: 'Access-Control-Allow-Origin' put: '*';
+				at: 'Access-Control-Allow-Origin' put: self class allowedOrigin;
 				at: 'Access-Control-Allow-Methods' put: 'GET, POST, DELETE, OPTIONS';
 				at: 'Access-Control-Allow-Headers' put: 'Content-Type' ];
 		exception: AXPLApiError -> [ :ex :req | self apiErrorResponse: ex ];

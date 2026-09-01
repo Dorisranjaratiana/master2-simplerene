@@ -58,7 +58,11 @@ créée à la demande et isolée des autres.
 | POST    | `/api/v1/domains/<domain>/fields/<label>/rename`     | `{newLabel}`           | `{ok:true}`                      |
 | POST    | `/api/v1/domains/<domain>/fields/<label>/level`      | `{level}`              | `{ok:true}`                      |
 | DELETE  | `/api/v1/domains/<domain>/fields/<label>`            | —                      | `{ok:true}`                      |
+| POST    | `/api/v1/domains/<domain>/reset`                     | —                      | `{ok:true}`                      |
 | GET     | `/api/v1/domains/<domain>/trace`                     | —                      | `[{timestamp,message}]`          |
+
+`reset` rejette la session en cache du domaine (recréée fraîche au prochain accès) —
+pratique pour rejouer une démo sans redémarrer tout le serveur.
 
 Toute erreur applicative répond avec un statut HTTP correct (404/409/403/400/500)
 et un corps uniforme `{error:{code,message}}` — `code` est un identifiant stable
@@ -78,6 +82,16 @@ natifs déclarés dans `descriptionForAXPL` restent protégés, conformément à
 limite documentée dans le mémoire (section 7.3.5). Ces opérations modifiant une
 classe globale et partagée, elles sont sérialisées par un `Mutex` dans
 `AXPLReflexivityEngine` pour rester sûres sous requêtes concurrentes.
+
+### CORS
+
+`Access-Control-Allow-Origin` vaut `'*'` par défaut (pratique en développement
+local). Avant tout déploiement public, restreindre à l'origine exacte du
+frontend :
+
+```st
+AXPLHttpServer allowedOrigin: 'https://mon-frontend.example.com'.
+```
 
 ## Architecture
 
