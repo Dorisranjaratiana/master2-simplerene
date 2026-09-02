@@ -18,6 +18,7 @@ AXPLTest >> setUp [
     container := client class descriptionForAXPL.
     engine := AXPLReflexivityEngine new
         metaContainer: container;
+        targetClass: client class;
         yourself.
     builder := AXPLFormBuilder new
         targetObject: client;
@@ -83,6 +84,30 @@ AXPLTest >> testLecturePsi [
 ]
 
 { #category : 'tests' }
+AXPLTest >> testSuppressionChampNatif [
+	"④ — N'IMPORTE QUEL champ est supprimable, y compris un champ natif déclaré dans
+	descriptionForAXPL : il quitte la méta-description et perd ses accesseurs. Sa
+	variable d'instance est en revanche conservée tant que du code métier l'utilise
+	encore (ici #initialize), pour ne pas corrompre la classe."
+	| avant |
+	avant := ClientHopital instVarNames size.
+	self assert: (engine readDescription: 'Nom') notNil.
+
+	engine removeField: 'Nom'.
+
+	self assert: (engine readDescription: 'Nom') isNil.
+	self deny: (ClientHopital includesSelector: #nom).
+	self assert: (ClientHopital instVarNames includes: 'nom').
+	self assert: ClientHopital instVarNames size equals: avant.
+
+	"Restauration : la variable d'instance ayant été préservée, recompiler les
+	accesseurs suffit à rendre la classe à son état initial pour les autres tests."
+	ClientHopital compile: 'nom' , String lf , '^ nom'.
+	ClientHopital compile: 'nom: aValue' , String lf , 'nom := aValue'.
+	self assert: (ClientHopital includesSelector: #nom).
+]
+
+{ #category : 'tests' }
 AXPLTest >> testSynchronisationExplication [
 	 "⑤ — Après intercession, l'explication est mise à jour"
 
@@ -96,6 +121,38 @@ AXPLTest >> testSynchronisationExplication [
 	 self
 		 assert: (desc commentFor: #expert)
 		 equals: 'Terme clinique normalisé.'
+]
+
+{ #category : 'tests' }
+AXPLTest >> testCycleDeVieChampComplet [
+	"④ — Cycle complet sur un champ créé à l'exécution : ajout structurel réel,
+	modification de chaque attribut (type, niveau, explication, label), puis
+	suppression structurelle réelle qui restitue la classe dans son état initial."
+	| avant label |
+	avant := ClientHopital instVarNames size.
+	label := 'Champ Test AXPL'.
+
+	engine createField: label type: #string level: #simple help: 'aide' options: #().
+	self assert: (engine readDescription: label) notNil.
+	self assert: ClientHopital instVarNames size equals: avant + 1.
+	self assert: (engine isPsiCreated: (engine readDescription: label)).
+
+	engine setType: #number ofDescription: label options: #().
+	self assert: ((engine readDescription: label) isKindOf: SRNumberDescription).
+
+	engine setLevel: #expert ofDescription: label.
+	self assert: (engine readDescription: label) level equals: #expert.
+
+	engine setHelp: 'aide experte' forLevel: #expert ofDescription: label.
+	self assert: ((engine readDescription: label) commentFor: #expert) equals: 'aide experte'.
+	self assert: ((engine readDescription: label) commentFor: #simple) equals: 'aide'.
+
+	engine relabelDescription: label to: label , ' 2'.
+	self assert: (engine readDescription: label) isNil.
+
+	engine removeField: label , ' 2'.
+	self assert: (engine readDescription: label , ' 2') isNil.
+	self assert: ClientHopital instVarNames size equals: avant.
 ]
 
 { #category : 'tests' }

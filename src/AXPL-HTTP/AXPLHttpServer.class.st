@@ -17,6 +17,7 @@ Contrat v1 (voir README) :
   POST   /api/v1/domains/<domain>/fields/<label>/value      {value}
   POST   /api/v1/domains/<domain>/fields/<label>/rename     {newLabel}
   POST   /api/v1/domains/<domain>/fields/<label>/level      {level}
+  POST   /api/v1/domains/<domain>/fields/<label>            {newLabel?,type?,options?,level?,help?}
   DELETE /api/v1/domains/<domain>/fields/<label>
   POST   /api/v1/domains/<domain>/reset
 
@@ -120,14 +121,21 @@ AXPLHttpServer >> domainsJson [
 		yourself
 ]
 
+{ #category : 'private' }
+AXPLHttpServer >> descriptionIn: aSession label: aLabel [
+	^ aSession metaContainer children
+		detect: [ :d | d label = aLabel ]
+		ifNone: [ AXPLFieldNotFoundError signal: 'Champ introuvable : "' , aLabel , '".' ]
+]
+
 { #category : 'http-handlers' }
 AXPLHttpServer >> fieldJsonFor: aDomainKey label: aLabel [
-	| session desc |
+	| session |
 	session := self sessionFor: aDomainKey.
-	desc := session metaContainer children
-		detect: [ :d | d label = aLabel ]
-		ifNone: [ AXPLFieldNotFoundError signal: 'Champ introuvable : "' , aLabel , '".' ].
-	^ self jsonForDescription: desc level: #expert targetObject: session targetObject
+	^ self
+		jsonForDescription: (self descriptionIn: session label: aLabel)
+		level: #expert
+		session: session
 ]
 
 { #category : 'http-handlers' }
@@ -144,7 +152,7 @@ AXPLHttpServer >> formResponseFor: aDomainKey level: aLevelString [
 	^ Dictionary new
 		at: #type put: 'group';
 		at: #label put: session metaContainer label;
-		at: #fields put: (visible collect: [ :d | self jsonForDescription: d level: level targetObject: session targetObject ]) asArray;
+		at: #fields put: (visible collect: [ :d | self jsonForDescription: d level: level session: session ]) asArray;
 		yourself
 ]
 
@@ -172,16 +180,17 @@ AXPLHttpServer >> jsonBodyOf: req [
 ]
 
 { #category : 'private' }
-AXPLHttpServer >> jsonForDescription: aDescription level: aLevel targetObject: aTargetObject [
+AXPLHttpServer >> jsonForDescription: aDescription level: aLevel session: aSession [
 	^ Dictionary new
 		at: #label put: aDescription label;
 		at: #type put: (fieldTypes typeNameFor: aDescription);
 		at: #level put: aDescription level asString;
 		at: #help put: (aDescription commentFor: aLevel);
-		at: #value put: (self jsonValue: (aDescription read: aTargetObject));
+		at: #value put: (self jsonValue: (aDescription read: aSession targetObject));
 		at: #options put: ((aDescription isKindOf: SRSingleOptionDescription)
 			ifTrue: [ aDescription options asArray ]
 			ifFalse: [ nil ]);
+		at: #psiCreated put: (aSession psiEngine isPsiCreated: aDescription);
 		yourself
 ]
 
@@ -251,6 +260,7 @@ AXPLHttpServer >> start [
 		POST: '/api/v1/domains/<domain>/fields/<label>/value' -> [ :req | self writeFieldFor: (req at: #domain) label: (req at: #label) from: req ];
 		POST: '/api/v1/domains/<domain>/fields/<label>/rename' -> [ :req | self renameFieldFor: (req at: #domain) label: (req at: #label) from: req ];
 		POST: '/api/v1/domains/<domain>/fields/<label>/level' -> [ :req | self setLevelFor: (req at: #domain) label: (req at: #label) from: req ];
+		POST: '/api/v1/domains/<domain>/fields/<label>' -> [ :req | self updateFieldFor: (req at: #domain) label: (req at: #label) from: req ];
 		DELETE: '/api/v1/domains/<domain>/fields/<label>' -> [ :req | self removeFieldFor: (req at: #domain) label: (req at: #label) ];
 		POST: '/api/v1/domains/<domain>/reset' -> [ :req | self resetDomain: (req at: #domain) ];
 		OPTIONS: '/*' -> [ :req | TeaResponse ok ];
@@ -283,13 +293,56 @@ AXPLHttpServer >> traceLogJsonFor: aDomainKey [
 ]
 
 { #category : 'http-handlers' }
+AXPLHttpServer >> updateFieldFor: aDomainKey label: aLabel from: req [
+	"Modification unifiée de n'importe quel attribut d'un champ : type, options, niveau,
+	explications graduées, label. Chaque clé est optionnelle ; seules celles présentes
+	dans le corps sont appliquées. Le renommage est traité en dernier car il change la
+	clé d'adressage du champ."
+	| session body engine current |
+	session := self sessionFor: aDomainKey.
+	body := self jsonBodyOf: req.
+	engine := session psiEngine.
+	current := aLabel.
+
+	(body includesKey: 'type')
+		ifTrue: [
+			engine
+				setType: (body at: 'type') asSymbol
+				ofDescription: current
+				options: (body at: 'options' ifAbsent: [ #() ]).
+			"La valeur déjà stockée peut être incompatible avec le nouveau type."
+			(self descriptionIn: session label: current) write: nil to: session targetObject ]
+		ifFalse: [
+			(body includesKey: 'options') ifTrue: [
+				engine setOptions: (body at: 'options') ofDescription: current ] ].
+
+	(body includesKey: 'level') ifTrue: [
+		engine setLevel: (body at: 'level') asSymbol ofDescription: current ].
+
+	(body includesKey: 'help') ifTrue: [
+		| help |
+		help := body at: 'help'.
+		(help isKindOf: Dictionary)
+			ifTrue: [
+				help keysAndValuesDo: [ :lvl :txt |
+					engine setHelp: txt forLevel: lvl asSymbol ofDescription: current ] ]
+			ifFalse: [
+				#( #simple #base #expert ) do: [ :lvl |
+					engine setHelp: help forLevel: lvl ofDescription: current ] ] ].
+
+	(body includesKey: 'newLabel') ifTrue: [
+		engine relabelDescription: current to: (body at: 'newLabel').
+		current := body at: 'newLabel' ].
+
+	^ Dictionary new at: #ok put: true; at: #label put: current; yourself
+]
+
+{ #category : 'http-handlers' }
 AXPLHttpServer >> writeFieldFor: aDomainKey label: aLabel from: req [
 	| session body desc |
 	session := self sessionFor: aDomainKey.
 	body := self jsonBodyOf: req.
-	desc := session metaContainer children
-		detect: [ :d | d label = aLabel ]
-		ifNone: [ AXPLFieldNotFoundError signal: 'Champ introuvable : "' , aLabel , '".' ].
+	desc := self descriptionIn: session label: aLabel.
 	desc write: (self coerceValue: (body at: 'value' ifAbsent: [ nil ]) for: desc) to: session targetObject.
 	^ Dictionary new at: #ok put: true; yourself
 ]

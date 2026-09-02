@@ -57,12 +57,23 @@ créée à la demande et isolée des autres.
 | POST    | `/api/v1/domains/<domain>/fields/<label>/value`      | `{value}`              | `{ok:true}`                      |
 | POST    | `/api/v1/domains/<domain>/fields/<label>/rename`     | `{newLabel}`           | `{ok:true}`                      |
 | POST    | `/api/v1/domains/<domain>/fields/<label>/level`      | `{level}`              | `{ok:true}`                      |
+| POST    | `/api/v1/domains/<domain>/fields/<label>`            | `{newLabel?,type?,options?,level?,help?}` | `{ok:true,label}` |
 | DELETE  | `/api/v1/domains/<domain>/fields/<label>`            | —                      | `{ok:true}`                      |
 | POST    | `/api/v1/domains/<domain>/reset`                     | —                      | `{ok:true}`                      |
 | GET     | `/api/v1/domains/<domain>/trace`                     | —                      | `[{timestamp,message}]`          |
 
 `reset` rejette la session en cache du domaine (recréée fraîche au prochain accès) —
 pratique pour rejouer une démo sans redémarrer tout le serveur.
+
+Le `POST` sur `/fields/<label>` modifie **n'importe quel attribut** d'un champ en une
+requête ; toutes les clés sont optionnelles et seules celles présentes sont
+appliquées. `help` accepte soit une chaîne unique (appliquée aux trois niveaux),
+soit un objet gradué `{"simple":"…","base":"…","expert":"…"}`. Le renommage est
+traité en dernier, la réponse renvoyant le `label` courant du champ.
+
+Chaque champ retourné porte un booléen `psiCreated`, qui distingue les champs
+ajoutés structurellement à l'exécution par Ψ des champs natifs déclarés dans
+`descriptionForAXPL`.
 
 Toute erreur applicative répond avec un statut HTTP correct (404/409/403/400/500)
 et un corps uniforme `{error:{code,message}}` — `code` est un identifiant stable
@@ -76,12 +87,21 @@ repris au chapitre 4 du mémoire) : la création ajoute réellement une variable
 d'instance à la classe métier via `#subclass:instanceVariableNames:classVariableNames:package:`
 puis compile ses accesseur/mutateur avec `#compile:` ; Pharo migre automatiquement
 les instances existantes vers la nouvelle forme, sans redémarrage (programmation
-live). La suppression effectue l'opération inverse (`#removeSelector:` puis retrait
-de la variable). Seuls les champs ainsi créés par Ψ sont supprimables — les champs
-natifs déclarés dans `descriptionForAXPL` restent protégés, conformément à la
-limite documentée dans le mémoire (section 7.3.5). Ces opérations modifiant une
-classe globale et partagée, elles sont sérialisées par un `Mutex` dans
-`AXPLReflexivityEngine` pour rester sûres sous requêtes concurrentes.
+live). La suppression effectue l'opération inverse : `#removeSelector:` sur les
+accesseurs, puis retrait de la variable d'instance elle-même — mais **uniquement si
+plus aucune méthode de la classe ne l'utilise** (`#whichSelectorsAccess:`). Un champ
+natif dont la variable est encore lue par du code métier (typiquement `#initialize`)
+disparaît donc de la méta-description et perd ses accesseurs, sans qu'on corrompe la
+classe en supprimant une variable encore référencée.
+
+**N'importe quel champ est modifiable et supprimable**, natif comme créé par Ψ : cela
+lève la limite documentée dans le mémoire (section 7.3.5), qui restreignait la
+réflexivité au renommage et au changement de niveau. Le mécanisme de protection reste
+disponible via `AXPLReflexivityEngine >> protectNativeFields: true` pour un projet
+qui souhaiterait réintroduire une politique de protection.
+
+Ces opérations modifiant une classe globale et partagée, elles sont sérialisées par un
+`Mutex` dans `AXPLReflexivityEngine` pour rester sûres sous requêtes concurrentes.
 
 ### CORS
 
@@ -109,7 +129,7 @@ Le framework intègre nativement quatre dimensions autour d'une méta-descriptio
   de types de champs (`AXPLFieldTypeRegistry`), hiérarchie d'erreurs (`AXPLApiError`)
 - `AXPL-UI` — Interface L
 - `AXPL-HTTP` — Serveur Teapot/JSON pour un frontend web, neutre vis-à-vis du domaine
-- `AXPL-Tests` — 10 tests unitaires
+- `AXPL-Tests` — 12 tests unitaires
 
 ## Dépendance
 
