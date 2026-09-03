@@ -32,6 +32,10 @@ AXPLDomainSession >> initializeFor: aDomain [
 		metaContainer: metaContainer;
 		targetClass: targetObject class;
 		yourself.
+	"Une session précédente a pu supprimer un champ natif, donc ses accesseurs, que
+	#descriptionForAXPL redéclare pourtant : on les rétablit pour que la session
+	reparte d'un état cohérent."
+	psiEngine restoreMissingAccessors.
 ]
 
 { #category : 'accessing' }

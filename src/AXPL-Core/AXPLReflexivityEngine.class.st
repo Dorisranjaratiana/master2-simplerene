@@ -208,6 +208,23 @@ AXPLReflexivityEngine >> readDescription: aLabel [
 		ifNone: [ nil ]
 ]
 
+{ #category : 'initialization' }
+AXPLReflexivityEngine >> restoreMissingAccessors [
+	"Après la suppression d'un champ natif, ses accesseurs n'existent plus alors que
+	#descriptionForAXPL continue de le déclarer : une session recréée (POST .../reset)
+	planterait donc à la première lecture. On recompile ici les accesseurs manquants
+	dont la variable d'instance subsiste — ce qui rend le reset réellement
+	restaurateur, sans jamais toucher aux champs que Ψ a supprimés intégralement."
+	metaContainer children do: [ :desc |
+		| readSel varName |
+		readSel := self readSelectorOf: desc.
+		varName := readSel asString.
+		((targetClass instVarNames includes: varName)
+			and: [ (targetClass includesSelector: readSel) not ]) ifTrue: [
+				targetClass compile: varName , String lf , '^ ' , varName.
+				targetClass compile: varName , ': aValue' , String lf , varName , ' := aValue' ] ]
+]
+
 { #category : 'private' }
 AXPLReflexivityEngine >> readSelectorOf: aDescription [
 	"SRDescription>>accessor: convertit le symbole reçu en SRSelectorAccessor :
