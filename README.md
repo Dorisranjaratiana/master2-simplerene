@@ -84,7 +84,7 @@ parsé comme du texte. Voir `AXPLApiError` et ses sous-classes dans `AXPL-Core`.
 Les créations/suppressions de champs (`POST .../fields`, `DELETE .../fields/<label>`)
 exploitent une véritable **intercession structurelle** Ψ (au sens de Maes, 1987,
 repris au chapitre 4 du mémoire) : la création ajoute réellement une variable
-d'instance à la classe métier via `#subclass:instanceVariableNames:classVariableNames:package:`
+d'instance à la classe métier via `#addInstVarNamed:`
 puis compile ses accesseur/mutateur avec `#compile:` ; Pharo migre automatiquement
 les instances existantes vers la nouvelle forme, sans redémarrage (programmation
 live). La suppression effectue l'opération inverse : `#removeSelector:` sur les

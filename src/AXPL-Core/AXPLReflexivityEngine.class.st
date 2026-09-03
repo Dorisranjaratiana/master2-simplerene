@@ -12,7 +12,7 @@ Instance unique créée dans targetObject: — jamais recréée entre les re-ren
 
 INTERCESSION STRUCTURELLE (Maes, 1987) au sens plein du terme :
 createField:... ajoute réellement une variable d'instance à la classe métier
-(targetClass) via #subclass:instanceVariableNames:classVariableNames:package:, puis
+(targetClass) via #addInstVarNamed: (repli sur l'API à slots), puis
 compile ses accesseur/mutateur via #compile: — exploitant la réflexivité native de
 Pharo (redéfinition de classe à chaud, migration automatique des instances
 existantes, programmation live) plutôt que de simuler le champ dans une structure
@@ -95,7 +95,7 @@ AXPLReflexivityEngine >> createField: aLabel type: aTypeSymbol level: aLevelSymb
 	et compile ses accesseur/mutateur, puis enregistre la description dans la méta-description.
 	La migration des instances existantes (dont targetObject) est gérée nativement par Pharo."
 	^ mutex critical: [
-		| accessorName descClass description priority newVarNames |
+		| accessorName descClass description priority |
 		(aLabel isNil or: [ aLabel isEmpty ]) ifTrue: [
 			AXPLInvalidPayloadError signal: 'Le label est requis.' ].
 		self checkValidLevel: aLevelSymbol.
@@ -105,9 +105,7 @@ AXPLReflexivityEngine >> createField: aLabel type: aTypeSymbol level: aLevelSymb
 		descClass := AXPLFieldTypeRegistry default descriptionClassFor: aTypeSymbol.
 		accessorName := self uniqueInstVarNameFor: aLabel.
 
-		newVarNames := targetClass instVarNames asOrderedCollection.
-		newVarNames add: accessorName.
-		self redefineTargetClassWith: newVarNames.
+		self addInstanceVariableNamed: accessorName.
 
 		targetClass compile: accessorName , String lf , '^ ' , accessorName.
 		targetClass compile: accessorName , ': aValue' , String lf , accessorName , ' := aValue'.
@@ -223,17 +221,24 @@ AXPLReflexivityEngine >> readSelectorOf: aDescription [
 ]
 
 { #category : 'private' }
-AXPLReflexivityEngine >> redefineTargetClassWith: aCollectionOfVarNames [
-	"Redéfinit targetClass avec la liste de variables d'instance donnée. Pharo migre
-	automatiquement les instances existantes vers la nouvelle forme (programmation live)."
-	targetClass superclass
-		subclass: targetClass name asSymbol
-		instanceVariableNames: (String streamContents: [ :s |
-			aCollectionOfVarNames
-				do: [ :each | s nextPutAll: each ]
-				separatedBy: [ s nextPut: $  ] ])
-		classVariableNames: ''
-		package: targetClass package name
+AXPLReflexivityEngine >> addInstanceVariableNamed: aName [
+	"Ajoute une variable d'instance à targetClass. On passe par l'API dédiée plutôt
+	que de reconstruire la définition complète de la classe : c'est plus sûr (ni le
+	package, ni les variables de classe, ni les traits ne risquent d'être perdus) et
+	Pharo migre de lui-même les instances existantes vers la nouvelle forme
+	(programmation live). Repli sur l'API à slots si l'image ne fournit pas
+	#addInstVarNamed:."
+	(targetClass respondsTo: #addInstVarNamed:)
+		ifTrue: [ targetClass addInstVarNamed: aName ]
+		ifFalse: [ targetClass addSlot: (InstanceVariableSlot named: aName asSymbol) ]
+]
+
+{ #category : 'private' }
+AXPLReflexivityEngine >> removeInstanceVariableNamed: aName [
+	"Opération inverse de #addInstanceVariableNamed:."
+	(targetClass respondsTo: #removeInstVarNamed:)
+		ifTrue: [ targetClass removeInstVarNamed: aName ]
+		ifFalse: [ targetClass removeSlot: (targetClass slotNamed: aName asSymbol) ]
 ]
 
 { #category : 'intercession' }
@@ -280,8 +285,7 @@ AXPLReflexivityEngine >> removeField: aLabel [
 		varRemoved := false.
 		((targetClass instVarNames includes: varName)
 			and: [ (targetClass whichSelectorsAccess: varName) isEmpty ]) ifTrue: [
-				self redefineTargetClassWith:
-					(targetClass instVarNames reject: [ :each | each = varName ]).
+				self removeInstanceVariableNamed: varName.
 				varRemoved := true ].
 
 		psiCreatedAccessors remove: readSel ifAbsent: [ nil ].
