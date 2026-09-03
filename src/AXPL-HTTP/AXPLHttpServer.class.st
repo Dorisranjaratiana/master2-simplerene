@@ -94,15 +94,22 @@ AXPLHttpServer >> coerceValue: aValue for: aDescription [
 
 { #category : 'http-handlers' }
 AXPLHttpServer >> createFieldFor: aDomainKey from: req [
-	| session body |
+	| session body label |
 	session := self sessionFor: aDomainKey.
 	body := self jsonBodyOf: req.
+	label := body at: 'label' ifAbsent: [ nil ].
 	session psiEngine
-		createField: (body at: 'label' ifAbsent: [ nil ])
+		createField: label
 		type: (body at: 'type' ifAbsent: [ AXPLInvalidPayloadError signal: 'Le type est requis.' ]) asSymbol
 		level: (body at: 'level' ifAbsent: [ AXPLInvalidPayloadError signal: 'Le niveau est requis.' ]) asSymbol
 		help: (body at: 'help' ifAbsent: [ '' ])
 		options: (body at: 'options' ifAbsent: [ #() ]).
+	"Attributs facultatifs, appliqués seulement s'ils sont fournis : la signature de
+	#createField: reste ainsi stable."
+	(body includesKey: 'group') ifTrue: [
+		session psiEngine setGroup: (body at: 'group') ofDescription: label ].
+	(body includesKey: 'required') ifTrue: [
+		session psiEngine setRequired: (body at: 'required') ofDescription: label ].
 	^ Dictionary new at: #ok put: true; yourself
 ]
 
@@ -140,7 +147,7 @@ AXPLHttpServer >> fieldJsonFor: aDomainKey label: aLabel [
 
 { #category : 'http-handlers' }
 AXPLHttpServer >> formResponseFor: aDomainKey level: aLevelString [
-	| session level builder visible |
+	| session level builder visible hidden |
 	session := self sessionFor: aDomainKey.
 	level := aLevelString asSymbol.
 	builder := AXPLFormBuilder new
@@ -149,10 +156,16 @@ AXPLHttpServer >> formResponseFor: aDomainKey level: aLevelString [
 		metaContainer: session metaContainer;
 		yourself.
 	visible := builder build.
+	"② Les champs écartés par l'adaptation ne sont pas tus : on les renvoie avec leur
+	explication et le niveau qu'ils requièrent, pour que l'interface puisse dire
+	POURQUOI ils sont absents — comme le fait déjà SRFormApp côté desktop."
+	hidden := session metaContainer children reject: [ :d | builder canUserSee: d ].
 	^ Dictionary new
 		at: #type put: 'group';
 		at: #label put: session metaContainer label;
+		at: #level put: aLevelString;
 		at: #fields put: (visible collect: [ :d | self jsonForDescription: d level: level session: session ]) asArray;
+		at: #hidden put: (hidden collect: [ :d | self jsonForHiddenDescription: d level: level ]) asArray;
 		yourself
 ]
 
@@ -190,7 +203,22 @@ AXPLHttpServer >> jsonForDescription: aDescription level: aLevel session: aSessi
 		at: #options put: ((aDescription isKindOf: SRSingleOptionDescription)
 			ifTrue: [ aDescription options asArray ]
 			ifFalse: [ nil ]);
+		at: #group put: aDescription group;
+		at: #required put: aDescription isRequired;
 		at: #psiCreated put: (aSession psiEngine isPsiCreated: aDescription);
+		yourself
+]
+
+{ #category : 'private' }
+AXPLHttpServer >> jsonForHiddenDescription: aDescription level: aLevel [
+	"Un champ masqué par l'adaptation. On ne renvoie ni sa valeur ni son type — il
+	n'est pas éditable à ce niveau — mais son explication et le niveau requis, qui
+	sont précisément ce qui rend le masquage explicable."
+	^ Dictionary new
+		at: #label put: aDescription label;
+		at: #help put: (aDescription commentFor: aLevel);
+		at: #level put: aDescription level asString;
+		at: #group put: aDescription group;
 		yourself
 ]
 
@@ -318,6 +346,12 @@ AXPLHttpServer >> updateFieldFor: aDomainKey label: aLabel from: req [
 
 	(body includesKey: 'level') ifTrue: [
 		engine setLevel: (body at: 'level') asSymbol ofDescription: current ].
+
+	(body includesKey: 'group') ifTrue: [
+		engine setGroup: (body at: 'group') ofDescription: current ].
+
+	(body includesKey: 'required') ifTrue: [
+		engine setRequired: (body at: 'required') ofDescription: current ].
 
 	(body includesKey: 'help') ifTrue: [
 		| help |

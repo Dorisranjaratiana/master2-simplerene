@@ -325,6 +325,20 @@ AXPLReflexivityEngine >> setHelp: aText forLevel: aLevelSymbol ofDescription: aL
 ]
 
 { #category : 'intercession' }
+AXPLReflexivityEngine >> setGroup: aGroupName ofDescription: aLabel [
+	"④ Range un champ dans une section. #group est une propriété native de
+	SRDescription : on l'expose plutôt que d'en réinventer une."
+	| desc |
+	desc := self readDescription: aLabel.
+	desc ifNil: [ AXPLFieldNotFoundError signal: 'Champ introuvable : "' , aLabel , '".' ].
+	desc group: ((aGroupName isNil or: [ aGroupName isEmpty ])
+		ifTrue: [ nil ]
+		ifFalse: [ aGroupName ]).
+	self logIntercession: 'Group: ' , aLabel , ' → '
+		, ((aGroupName isNil or: [ aGroupName isEmpty ]) ifTrue: [ '(aucune section)' ] ifFalse: [ aGroupName ]).
+]
+
+{ #category : 'intercession' }
 AXPLReflexivityEngine >> setLevel: aNewLevel ofDescription: aLabel [
 	| desc |
 	self checkValidLevel: aNewLevel.
@@ -347,6 +361,17 @@ AXPLReflexivityEngine >> setOptions: anOptionsCollection ofDescription: aLabel [
 ]
 
 { #category : 'intercession' }
+AXPLReflexivityEngine >> setRequired: aBoolean ofDescription: aLabel [
+	"④ Rend un champ obligatoire ou facultatif. #required est également natif dans
+	SimpleRene, qui sait déjà le valider (#isSatisfiedBy:)."
+	| desc |
+	desc := self readDescription: aLabel.
+	desc ifNil: [ AXPLFieldNotFoundError signal: 'Champ introuvable : "' , aLabel , '".' ].
+	desc required: aBoolean.
+	self logIntercession: 'Required: ' , aLabel , ' → ' , aBoolean asString.
+]
+
+{ #category : 'intercession' }
 AXPLReflexivityEngine >> setType: aTypeSymbol ofDescription: aLabel options: anOptionsCollection [
 	"④ Change le type d'un champ existant. La classe de description étant porteuse du
 	type, on construit une nouvelle description de la bonne classe en préservant label,
@@ -366,6 +391,8 @@ AXPLReflexivityEngine >> setType: aTypeSymbol ofDescription: aLabel options: anO
 		priority: desc priority;
 		level: desc level;
 		comment: desc comment;
+		group: desc group;
+		required: desc isRequired;
 		yourself.
 	aTypeSymbol = #select ifTrue: [ newDesc options: anOptionsCollection asArray ].
 

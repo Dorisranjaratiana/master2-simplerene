@@ -41,6 +41,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #nom;
 		priority: 10;
 		level: #simple;
+		group: 'Identité et cursus';
 		comment: (Dictionary new 
 			at: #simple put: 'Votre nom de famille officiel.';
 			at: #base   put: 'Identifiant civil pour les registres universitaires.';
@@ -52,6 +53,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #prenom;
 		priority: 20;
 		level: #simple;
+		group: 'Identité et cursus';
 		comment: (Dictionary new 
 			at: #simple put: 'Votre prénom usuel.';
 			at: #base   put: 'Prénom utilisé pour la personnalisation des diplômes.';
@@ -63,6 +65,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #matricule;
 		priority: 30;
 		level: #simple;
+		group: 'Identité et cursus';
 		comment: (Dictionary new 
 			at: #simple put: 'Votre numéro d''étudiant unique.';
 			at: #base   put: 'Identifiant de session pour les examens et services numériques.';
@@ -75,6 +78,7 @@ Etudiant class >> descriptionForAXPL [
 		options: #('Informatique' 'Médecine' 'Droit' 'Arts');
 		priority: 40;
 		level: #simple;
+		group: 'Identité et cursus';
 		comment: (Dictionary new 
 			at: #simple put: 'Votre domaine d''études principal.';
 			at: #base   put: 'Parcours académique définissant vos unités d''enseignement.';
@@ -87,6 +91,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #moyenne;
 		priority: 50;
 		level: #base;
+		group: 'Suivi et contact';
 		comment: (Dictionary new 
 			at: #simple put: 'Votre résultat global actuel.';
 			at: #base   put: 'Indicateur de performance pour le suivi pédagogique.';
@@ -98,6 +103,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #dateNaissance;
 		priority: 60;
 		level: #base;
+		group: 'Suivi et contact';
 		comment: (Dictionary new 
 			at: #base   put: 'Votre date de naissance officielle.';
 			at: #expert put: 'Vérification de l''âge légal pour les droits sociaux et assurances.';
@@ -108,6 +114,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #email;
 		priority: 70;
 		level: #base;
+		group: 'Suivi et contact';
 		comment: (Dictionary new 
 			at: #simple put: 'Votre adresse de contact universitaire.';
 			at: #base   put: 'Canal de communication pour les convocations officielles.';
@@ -119,6 +126,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #boursier;
 		priority: 80;
 		level: #base;
+		group: 'Suivi et contact';
 		comment: (Dictionary new 
 			at: #simple put: 'Indique si vous bénéficiez d''une aide financière.';
 			at: #base   put: 'Statut utilisé pour l''exonération des frais d''inscription.';
@@ -131,6 +139,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #montantBourse;
 		priority: 90;
 		level: #expert;
+		group: 'Administration';
 		comment: (Dictionary new 
 			at: #base   put: 'Somme allouée pour l''année universitaire.';
 			at: #expert put: 'Variable budgétaire soumise à vérification d''assiduité.';
@@ -141,6 +150,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #remarques;
 		priority: 100;
 		level: #expert;
+		group: 'Administration';
 		comment: (Dictionary new 
 			at: #base   put: 'Commentaires du corps enseignant.';
 			at: #expert put: 'Évaluations qualitatives confidentielles du jury de délibération.';
@@ -151,6 +161,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #estDiplomable;
 		priority: 110;
 		level: #expert;
+		group: 'Administration';
 		comment: (Dictionary new 
 			at: #base   put: 'Vérification des crédits ECTS requis.';
 			at: #expert put: 'État logique final validant la fin du cycle universitaire.';
@@ -161,6 +172,7 @@ Etudiant class >> descriptionForAXPL [
 		accessor: #adresse;
 		priority: 120;
 		level: #expert;
+		group: 'Administration';
 		comment: (Dictionary new 
 			at: #base   put: 'Votre lieu de résidence actuel.';
 			at: #expert put: 'Donnée géographique pour la gestion des zones de bourses.';
