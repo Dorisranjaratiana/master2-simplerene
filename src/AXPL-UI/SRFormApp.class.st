@@ -233,7 +233,7 @@ SRFormApp >> runPsiCreateField [
                 request: 'Ψ — Options séparées par des virgules :'
                 initialAnswer: ''.
             (optionsText isNil or: [ optionsText isEmpty ]) ifTrue: [ ^ self ].
-            options := ((optionsText tokenize: ',') collect: [ :each | each trimSeparators ]) asArray.
+            options := ((optionsText substrings: ',') collect: [ :each | each trimBoth ]) asArray.
             psiEngine createSelectionField: label options: options level: niveau ]
         ifFalse: [
             typeClasses := { SRStringDescription. SRNumberDescription. SRBooleanDescription. SRDateDescription }.

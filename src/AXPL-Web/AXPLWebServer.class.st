@@ -74,7 +74,7 @@ AXPLWebServer >> coerceValue: aValue for: aDescription [
 AXPLWebServer >> dateFromIso: aString [
 	| datePart parts year month day |
 	datePart := aString copyFrom: 1 to: (10 min: aString size).
-	parts := datePart tokenize: '-'.
+	parts := datePart substrings: '-'.
 	(parts size = 3
 		and: [ (year := (parts at: 1) asInteger) notNil
 		and: [ (month := (parts at: 2) asInteger) notNil
