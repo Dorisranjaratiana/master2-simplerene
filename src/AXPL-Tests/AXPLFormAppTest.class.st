@@ -115,7 +115,11 @@ AXPLFormAppTest >> testLaFenetreOuverteSAdapteAuNiveau [
             window adapter widget height ].
       "<= entre Base et Expert : sur un petit écran, les deux peuvent
       atteindre le plafond maxWindowHeight."
-      self assert: heights first < heights second.
+      self
+          assert: heights first < heights second
+          description: 'hauteurs ' , heights printString , ' plafond ' , app maxWindowHeight printString
+              , ' écran ' , app currentWorld extent printString
+              , ' minExtent ' , window adapter widget minExtent printString.
       self assert: heights second <= heights last.
       self assert: heights last <= app maxWindowHeight ]
         ensure: [ window close ].
