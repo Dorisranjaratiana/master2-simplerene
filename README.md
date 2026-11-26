@@ -33,8 +33,9 @@ Metacello new
 
 **En développement** (branche `integration-simplerene`, après v1.0.0) :
 - Ψ ② : un champ créé par Ψ reçoit son explication dès la création (facultative) ; *Ψ → Modifier un champ → Modifier l'explication* change l'aide d'un champ, pour un niveau ou pour tous, sans effacer celle des autres niveaux ; chaque changement d'explication est tracé
-- web : `explanation` facultatif dans `POST /psi/create-field`, nouvelle route `POST /psi/explain`
-- 105 tests
+- Ψ ↶ : *Ψ → Annuler la dernière modification Ψ* défait les intercessions une à une, de la plus récente à la plus ancienne (création, suppression — le champ revient à sa place avec sa valeur et ses explications —, renommage, niveau, explication) ; l'annulation est tracée
+- web : `explanation` facultatif dans `POST /psi/create-field`, nouvelles routes `POST /psi/explain` et `POST /psi/undo`
+- 120 tests
 
 **v1.0.0** — première version stable :
 - dépendance réelle à SimpleRene (extensions, jamais de réimplémentation), Teapot et NeoJSON — toutes épinglées sur un commit
@@ -79,6 +80,8 @@ framework psiEngine
     explanation: 'Indispensable avant une transfusion.'.    "Ψ ② — avec son aide"
 framework psiEngine updateExplanation: 'Nom' forLevel: #expert with: 'Nom d''état civil.'.    "② un niveau"
 framework psiEngine updateExplanation: 'Nom' with: 'Nom de famille.'.    "② tous les niveaux"
+framework psiEngine lastUndoableChange.    "'Explication : Nom [tous niveaux]'"
+framework psiEngine undoLast.    "↶ défait la dernière intercession (canUndo pour savoir s'il en reste)"
 ```
 
 Tous les visiteurs se construisent de la même façon, avec l'objet métier et le niveau — le visiteur Spec2 demande en plus un presenter pour ses widgets :
@@ -218,6 +221,7 @@ Routes disponibles (CORS ouvert, pratique pour un frontend en développement loc
 | `POST /psi/set-level` `{label, level}` | Ψ — change le niveau d'un champ |
 | `POST /psi/create-field` `{label, type, level, options?, explanation?}` | Ψ — crée un champ (`type` : `string`/`number`/`boolean`/`date`/`select`), avec son explication ② facultative |
 | `POST /psi/explain` `{label, text, level?}` | Ψ ② — change l'explication d'un champ pour `level`, ou pour tous les niveaux sans `level` |
+| `POST /psi/undo` | Ψ ↶ — annule la dernière modification Ψ (`{ok, undone}`), ou `{error}` s'il n'y en a plus |
 | `POST /psi/remove-field` `{label}` | Ψ — supprime un champ |
 | `GET /psi/trace` | Historique horodaté Ψ |
 

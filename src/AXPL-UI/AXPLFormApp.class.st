@@ -380,14 +380,43 @@ AXPLFormApp >> runPsiEditField: aLabel [
 
 { #category : 'psi' }
 AXPLFormApp >> runPsiMenu [
-    "Point d'entrée du bouton Ψ : créer, modifier ou supprimer un champ."
+    "Point d'entrée du bouton Ψ : créer, modifier ou supprimer un champ,
+    ou annuler la dernière modification Ψ."
     | action |
     action := UIManager default
-        chooseFrom: #( 'Créer un champ' 'Modifier un champ existant' 'Supprimer un champ' )
+        chooseFrom: #( 'Créer un champ' 'Modifier un champ existant' 'Supprimer un champ' 'Annuler la dernière modification Ψ' )
         title: 'Ψ — Que voulez-vous faire ?'.
     action = 1 ifTrue: [ ^ self runPsiCreateField ].
     action = 2 ifTrue: [ ^ self runPsiSelectFieldThenDo: [ :label | self runPsiEditField: label ] ].
     action = 3 ifTrue: [ ^ self runPsiSelectFieldThenDo: [ :label | self runPsiRemoveField: label ] ].
+    action = 4 ifTrue: [ ^ self runPsiUndo ].
+]
+
+{ #category : 'psi' }
+AXPLFormApp >> runPsiUndo [
+    "↶ Montre la modification Ψ qui va être défaite, puis l'annule."
+    | change |
+    self psiEngine canUndo ifFalse: [
+        ^ self inform: 'Aucune modification Ψ à annuler.' ].
+    (UIManager default confirm:
+        'Annuler la dernière modification Ψ ?' , String cr
+        , '« ' , self psiEngine lastUndoableChange , ' »')
+        ifFalse: [ ^ self ].
+    change := self undoLastPsiChange.
+    self inform:
+        'Ψ annulé : ' , change
+        , String cr
+        , 'Horodatage : ' , DateAndTime now printString.
+]
+
+{ #category : 'psi' }
+AXPLFormApp >> undoLastPsiChange [
+    "Annule la dernière intercession Ψ et redessine le formulaire au
+    niveau courant. Renvoie le texte de la modification annulée."
+    | change |
+    change := self psiEngine undoLast.
+    self updateInterface.
+    ^ change
 ]
 
 { #category : 'psi' }

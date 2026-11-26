@@ -265,3 +265,24 @@ AXPLWebServerTest >> testPsiExplainRouteSansNiveauVautPourTous [
             assert: ((((server formJsonFor: lvl) at: #fields) detect: [ :f | (f at: #label) = 'Nom' ]) at: #help)
             equals: 'Nom de famille.' ].
 ]
+
+{ #category : 'tests' }
+AXPLWebServerTest >> testPsiUndoRouteAnnuleLaDerniereModification [
+    "POST /psi/undo — ↶ depuis le web."
+    | server result json |
+    server := AXPLWebServer new targetObject: client; yourself.
+    server safely: [ server psiRename: (AXPLFakeWebRequest withJson: '{"oldLabel":"Allergies","newLabel":"Risques"}') ].
+    result := server safely: [ server psiUndo ].
+    self assert: (result at: #ok) equals: true.
+    self assert: ((result at: #undone) includesSubstring: 'Allergies').
+    json := server formJsonFor: #expert.
+    self assert: ((json at: #fields) anySatisfy: [ :f | (f at: #label) = 'Allergies' ]).
+]
+
+{ #category : 'tests' }
+AXPLWebServerTest >> testPsiUndoRouteRienAAnnulerRenvoieErreur [
+    | server result |
+    server := AXPLWebServer new targetObject: client; yourself.
+    result := server safely: [ server psiUndo ].
+    self assert: (result at: #error) equals: 'Aucune modification Ψ à annuler.'.
+]

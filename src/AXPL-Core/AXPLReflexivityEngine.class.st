@@ -12,6 +12,11 @@ crée ou retire un champ entier du metaContainer à l'exécution. Un champ cré�
 n'est adossé à aucune variable d'instance : sa valeur vit dans le dictionnaire
 #properties de l'objet cible, via un SRPluggableAccessor.
 [t] traceLog — historique horodaté de toutes les intercessions (DateAndTime).
+↶ undoLast — annule la dernière intercession, puis la précédente, etc. (pile
+LIFO undoLog). Chaque intercession y range, avec le texte de sa trace, le
+bloc qui la défait sur l'objet description lui-même — pas sur son label,
+qui a pu changer depuis. Annuler dans l'ordre inverse remet exactement
+l'état antérieur. L'annulation est elle-même tracée (« Annulation : … »).
 Instance unique créée dans targetObject: — jamais recréée entre les re-rendus.""
 "
 Class {
@@ -20,6 +25,7 @@ Class {
 	#instVars : [
 		'metaContainer',
 		'traceLog',
+		'undoLog',
 		'nextKeyId'
 	],
 	#category : 'AXPL-Core',
@@ -132,7 +138,9 @@ AXPLReflexivityEngine >> register: aDescription labelled: aLabel level: aLevel e
     (aTextOrNil notNil and: [ aTextOrNil notEmpty ])
         ifTrue: [ aDescription comment: aTextOrNil ].
     metaContainer add: aDescription.
-    traceLog add: (Association key: DateAndTime now value: 'Création : ' , aLabel).
+    self
+        record: 'Création : ' , aLabel
+        undo: [ metaContainer remove: aDescription ].
     ^ aDescription
 ]
 
@@ -140,6 +148,7 @@ AXPLReflexivityEngine >> register: aDescription labelled: aLabel level: aLevel e
 AXPLReflexivityEngine >> initialize [
     super initialize.
     traceLog := OrderedCollection new.
+    undoLog := OrderedCollection new.
     nextKeyId := 0.
 ]
 
@@ -158,7 +167,11 @@ AXPLReflexivityEngine >> removeField: aLabel [
     desc := self readDescription: aLabel.
     desc ifNotNil: [
         metaContainer remove: desc.
-        traceLog add: (Association key: DateAndTime now value: 'Suppression : ' , aLabel) ].
+        "Remis dans le container trié par priorité, le champ retrouve sa
+        place, son accessor (donc sa valeur) et ses explications."
+        self
+            record: 'Suppression : ' , aLabel
+            undo: [ metaContainer add: desc ] ].
 ]
 
 { #category : 'accessing' }
@@ -185,22 +198,23 @@ AXPLReflexivityEngine >> relabelDescription: oldLabel to: newLabel [
     oldLabel = newLabel ifTrue: [ ^ self ].
     self assertLabelAvailable: newLabel.
     desc label: newLabel.
-    traceLog add: (Association
-        key: DateAndTime now
-        value: ('Rename: ' , oldLabel , ' → ' , newLabel)).
+    self
+        record: 'Rename: ' , oldLabel , ' → ' , newLabel
+        undo: [ desc label: oldLabel ].
 ]
 
 { #category : 'intercession' }
 AXPLReflexivityEngine >> setLevel: aNewLevel ofDescription: aLabel [
-    | desc |
+    | desc oldLevel |
     self assertValidLevel: aNewLevel.
     desc := metaContainer children
         detect: [ :d | d label = aLabel ]
         ifNone: [ ^ self ].
+    oldLevel := desc level.
     desc level: aNewLevel.
-    traceLog add: (Association
-        key: DateAndTime now
-        value: 'Level: ' , aLabel , ' → ' , aNewLevel asString).
+    self
+        record: 'Level: ' , aLabel , ' → ' , aNewLevel asString
+        undo: [ desc level: oldLevel ].
 ]
 
 { #category : 'accessing' }
@@ -218,10 +232,10 @@ AXPLReflexivityEngine >> updateExplanation: aLabel forLevel: aLevel with: aText 
     self assertValidLevel: aLevel.
     desc := self readDescription: aLabel.
     desc ifNil: [ ^ self ].
-    (self explanationDictionaryOf: desc) at: aLevel put: aText.
-    traceLog add: (Association
-        key: DateAndTime now
-        value: 'Explication : ' , aLabel , ' [' , aLevel asString , ']').
+    self
+        changeExplanationOf: desc
+        by: [ (self explanationDictionaryOf: desc) at: aLevel put: aText ]
+        tracing: 'Explication : ' , aLabel , ' [' , aLevel asString , ']'.
 ]
 
 { #category : 'intercession' }
@@ -230,8 +244,52 @@ AXPLReflexivityEngine >> updateExplanation: aLabel with: aText [
     | desc |
     desc := self readDescription: aLabel.
     desc ifNil: [ ^ self ].
-    desc comment: aText.
-    traceLog add: (Association
-        key: DateAndTime now
-        value: 'Explication : ' , aLabel , ' [tous niveaux]').
+    self
+        changeExplanationOf: desc
+        by: [ desc comment: aText ]
+        tracing: 'Explication : ' , aLabel , ' [tous niveaux]'.
+]
+
+{ #category : 'private' }
+AXPLReflexivityEngine >> changeExplanationOf: aDescription by: aBlock tracing: aText [
+    "Le Dictionary des explications est modifié EN PLACE : on garde une
+    copie de l'ancien comment (nil, String ou Dictionary) pour pouvoir le
+    remettre tel quel."
+    | oldComment |
+    oldComment := aDescription comment copy.
+    aBlock value.
+    self record: aText undo: [ aDescription comment: oldComment ]
+]
+
+{ #category : 'private' }
+AXPLReflexivityEngine >> record: aText undo: anUndoBlock [
+    "[t] + ↶ : toute intercession passe par ici — trace horodatée et
+    moyen de la défaire."
+    traceLog add: (Association key: DateAndTime now value: aText).
+    undoLog add: (Association key: aText value: anUndoBlock)
+]
+
+{ #category : 'undo' }
+AXPLReflexivityEngine >> canUndo [
+    ^ undoLog notEmpty
+]
+
+{ #category : 'undo' }
+AXPLReflexivityEngine >> lastUndoableChange [
+    "Texte de l'intercession qu'undoLast annulerait (nil s'il n'y en a pas),
+    pour la montrer à l'utilisateur avant de confirmer."
+    ^ undoLog ifEmpty: [ nil ] ifNotEmpty: [ undoLog last key ]
+]
+
+{ #category : 'undo' }
+AXPLReflexivityEngine >> undoLast [
+    "↶ Défait la dernière intercession encore active et renvoie son texte.
+    L'annulation n'est pas elle-même annulable (pas de « rétablir »), mais
+    elle est tracée."
+    | change |
+    undoLog ifEmpty: [ ^ Error signal: 'Aucune modification Ψ à annuler.' ].
+    change := undoLog removeLast.
+    change value value.
+    traceLog add: (Association key: DateAndTime now value: 'Annulation : ' , change key).
+    ^ change key
 ]

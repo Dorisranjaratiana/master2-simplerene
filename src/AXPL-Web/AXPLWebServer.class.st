@@ -12,6 +12,7 @@ Routes :
   POST /psi/set-level    {label, level}
   POST /psi/create-field {label, type, level, options?, explanation?}
   POST /psi/explain      {label, text, level?}  (sans level : tous niveaux)
+  POST /psi/undo                        → annule la dernière modification Ψ
   POST /psi/remove-field {label}
   GET  /psi/trace                       → historique horodaté Ψ
 
@@ -172,6 +173,15 @@ AXPLWebServer >> psiExplain: aRequest [
 ]
 
 { #category : 'psi' }
+AXPLWebServer >> psiUndo [
+	"↶ — renvoie le texte de la modification annulée, ou une erreur
+	propre (via safely:) s'il n'y a rien à annuler."
+	^ self ok
+		at: #undone put: framework psiEngine undoLast;
+		yourself
+]
+
+{ #category : 'psi' }
 AXPLWebServer >> psiRemoveField: aRequest [
 	"⑥"
 	| body |
@@ -225,6 +235,7 @@ AXPLWebServer >> start: aPort [
 		POST: '/psi/create-field' -> [ :req | self safely: [ self psiCreateField: req ] ];
 		POST: '/psi/remove-field' -> [ :req | self safely: [ self psiRemoveField: req ] ];
 		POST: '/psi/explain' -> [ :req | self safely: [ self psiExplain: req ] ];
+		POST: '/psi/undo' -> [ :req | self safely: [ self psiUndo ] ];
 		GET: '/psi/trace' -> [ :req | self safely: [ self traceJson ] ].
 	teapot start.
 ]

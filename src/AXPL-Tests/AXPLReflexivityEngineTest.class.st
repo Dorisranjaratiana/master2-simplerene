@@ -292,3 +292,120 @@ AXPLReflexivityEngineTest >> testExplicationDUnChampPsiSurvitAuxIntercessions [
     engine setLevel: #base ofDescription: 'Note clinique'.
     self assert: (desc commentFor: #base) equals: 'Réservé à l''équipe soignante.'.
 ]
+
+{ #category : 'tests - annulation' }
+AXPLReflexivityEngineTest >> testRienAAnnuler [
+    self deny: engine canUndo.
+    self assert: engine lastUndoableChange isNil.
+    self should: [ engine undoLast ] raise: Error.
+    self assert: engine traceLog isEmpty.
+]
+
+{ #category : 'tests - annulation' }
+AXPLReflexivityEngineTest >> testAnnulerUneCreation [
+    | annule |
+    engine createField: 'Note interne' type: SRStringDescription level: #base.
+    self assert: engine canUndo.
+    annule := engine undoLast.
+    self assert: annule equals: 'Création : Note interne'.
+    self assert: (engine readDescription: 'Note interne') isNil.
+    self deny: engine canUndo.
+]
+
+{ #category : 'tests - annulation' }
+AXPLReflexivityEngineTest >> testAnnulerUneSuppressionRestaureLeChampASaPlace [
+    "Le même objet description revient, à la même position, avec son
+    niveau et ses explications graduées."
+    | desc position |
+    desc := engine readDescription: 'Allergies'.
+    position := container children indexOf: desc.
+    engine removeField: 'Allergies'.
+    self assert: (engine readDescription: 'Allergies') isNil.
+    engine undoLast.
+    self assert: (engine readDescription: 'Allergies') identicalTo: desc.
+    self assert: (container children indexOf: desc) equals: position.
+    self assert: desc level equals: #expert.
+]
+
+{ #category : 'tests - annulation' }
+AXPLReflexivityEngineTest >> testAnnulerUnRenommage [
+    engine relabelDescription: 'Nom' to: 'Identifiant'.
+    engine undoLast.
+    self assert: (engine readDescription: 'Nom') notNil.
+    self assert: (engine readDescription: 'Identifiant') isNil.
+]
+
+{ #category : 'tests - annulation' }
+AXPLReflexivityEngineTest >> testAnnulerUnChangementDeNiveau [
+    engine setLevel: #simple ofDescription: 'Allergies'.
+    engine undoLast.
+    self assert: (engine readDescription: 'Allergies') level equals: #expert.
+]
+
+{ #category : 'tests - annulation' }
+AXPLReflexivityEngineTest >> testAnnulerUneExplicationDeNiveau [
+    "Le Dictionary des explications est modifié en place : l'annulation
+    doit remettre l'ancien texte, pas le nouveau."
+    | desc avant |
+    desc := engine readDescription: 'Nom'.
+    avant := AXPLFormBuilder levels collect: [ :lvl | desc commentFor: lvl ].
+    engine updateExplanation: 'Nom' forLevel: #expert with: 'Nouveau texte.'.
+    engine undoLast.
+    self assert: (AXPLFormBuilder levels collect: [ :lvl | desc commentFor: lvl ]) equals: avant.
+]
+
+{ #category : 'tests - annulation' }
+AXPLReflexivityEngineTest >> testAnnulerUneExplicationRemetLAideCommune [
+    | desc |
+    desc := engine
+        createField: 'Note interne'
+        type: SRStringDescription
+        level: #simple
+        explanation: 'Aide commune.'.
+    engine updateExplanation: 'Note interne' forLevel: #expert with: 'Aide experte.'.
+    engine undoLast.
+    self assert: desc comment equals: 'Aide commune.'.
+    engine updateExplanation: 'Note interne' with: 'Autre aide.'.
+    engine undoLast.
+    self assert: desc comment equals: 'Aide commune.'.
+]
+
+{ #category : 'tests - annulation' }
+AXPLReflexivityEngineTest >> testAnnulationsSuccessivesDansLOrdreInverse [
+    | desc |
+    desc := engine createField: 'Note interne' type: SRStringDescription level: #expert.
+    engine relabelDescription: 'Note interne' to: 'Note clinique'.
+    engine setLevel: #simple ofDescription: 'Note clinique'.
+    self assert: engine lastUndoableChange equals: 'Level: Note clinique → simple'.
+    engine undoLast.
+    self assert: desc level equals: #expert.
+    self assert: desc label equals: 'Note clinique'.
+    engine undoLast.
+    self assert: desc label equals: 'Note interne'.
+    engine undoLast.
+    self assert: (engine readDescription: 'Note interne') isNil.
+    self deny: engine canUndo.
+]
+
+{ #category : 'tests - annulation' }
+AXPLReflexivityEngineTest >> testAnnulationTracee [
+    "[t] L'annulation est elle-même une intercession horodatée."
+    engine relabelDescription: 'Nom' to: 'Identifiant'.
+    engine undoLast.
+    self assert: engine traceLog size equals: 2.
+    self assert: (engine traceLog last key isKindOf: DateAndTime).
+    self assert: engine traceLog last value equals: 'Annulation : Rename: Nom → Identifiant'.
+]
+
+{ #category : 'tests - annulation' }
+AXPLReflexivityEngineTest >> testIntercessionsSansEffetNeSontPasAnnulables [
+    "Ce qui ne change rien n'a rien à annuler (et ne laisse rien à défaire
+    à la place d'une vraie modification)."
+    engine relabelDescription: 'ChampInexistant' to: 'Nouveau'.
+    engine relabelDescription: 'Nom' to: 'Nom'.
+    engine removeField: 'ChampInexistant'.
+    engine setLevel: #base ofDescription: 'ChampInexistant'.
+    engine updateExplanation: 'ChampInexistant' with: 'texte'.
+    self should: [ engine relabelDescription: 'Nom' to: 'Prénom' ] raise: Error.
+    self deny: engine canUndo.
+]

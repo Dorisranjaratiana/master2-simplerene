@@ -227,3 +227,17 @@ AXPLFormAppTest >> testModifierLExplicationPourTousLesNiveauxDepuisLaFenetre [
     AXPLFormBuilder levels do: [ :lvl |
         self assert: (desc commentFor: lvl) equals: 'Nom de famille.' ].
 ]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testAnnulerLaDerniereModificationPsiDepuisLaFenetre [
+    "↶ Le formulaire est redessiné : le champ créé par Ψ disparaît."
+    | attendu annule |
+    app levelDropList selectItem: #expert.
+    attendu := app formContainer layout presenters size.
+    app psiEngine createField: 'Note interne' type: SRStringDescription level: #simple.
+    app updateInterface.
+    self assert: app formContainer layout presenters size equals: attendu + 1.
+    annule := app undoLastPsiChange.
+    self assert: annule equals: 'Création : Note interne'.
+    self assert: app formContainer layout presenters size equals: attendu.
+]
