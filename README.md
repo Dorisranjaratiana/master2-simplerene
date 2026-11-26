@@ -36,7 +36,7 @@ Metacello new
 - Ψ ↶ : *Ψ → Annuler la dernière modification Ψ* défait les intercessions une à une, de la plus récente à la plus ancienne (création, suppression — le champ revient à sa place avec sa valeur et ses explications —, renommage, niveau, explication) ; l'annulation est tracée
 - 💾 sauvegarde STON : *Enregistrer* écrit le dossier (valeurs + modifications Ψ + trace) dans un fichier lisible, *Ouvrir…* le recharge ; les modifications Ψ sont rejouées sur un formulaire neuf et restent annulables ; les mots de passe ne sont jamais écrits ; une valeur invalide dans le fichier n'est pas réécrite
 - web : `explanation` facultatif dans `POST /psi/create-field`, nouvelles routes `POST /psi/explain` et `POST /psi/undo`
-- 136 tests
+- 133 tests
 
 **v1.0.0** — première version stable :
 - dépendance réelle à SimpleRene (extensions, jamais de réimplémentation), Teapot et NeoJSON — toutes épinglées sur un commit
