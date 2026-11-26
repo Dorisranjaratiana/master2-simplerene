@@ -34,6 +34,6 @@ AXPLDescriptionExtensionTest >> testExplicationContextuelle [
 { #category : 'tests' }
 AXPLDescriptionExtensionTest >> testNiveauParDefaut [
     "Une description fraîche, sans level: explicite, doit être #simple
-    (defaultDisclosureLevel de l'extension SRDescription)."
+    (valeur de repli dans SRDescription >> level, extension AXPL)."
     self assert: SRStringDescription new level equals: #simple.
 ]

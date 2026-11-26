@@ -51,6 +51,70 @@ framework psiEngine createField: 'Note interne' type: SRStringDescription level:
 
 La façade s'arrête volontairement avant la construction du visiteur (`AXPLSpecVisitor` a besoin d'un presenter Spec2, `AXPLJsonVisitor` d'un niveau) : ces deux contrats sont légitimement différents selon la cible, c'est le principe même du ⑦ abstrait (`AXPLVisitor`).
 
+## Étendre AXPL — le protocole `descriptionForAXPL`
+
+C'est l'unique point de branchement entre une classe métier et le framework. `ClientHopital` et `Etudiant` (dans `AXPL-Examples`) ne sont que deux exemples parmi une infinité possible — n'importe quelle classe peut devenir utilisable par AXPL en implémentant une seule méthode **de classe** :
+
+```st
+MaClasse class >> descriptionForAXPL [
+    ^ SRPriorityContainer new
+]
+```
+
+### Contrat
+
+| | Obligatoire | Détail |
+|---|---|---|
+| Retour | **Oui** | Une instance de `SRPriorityContainer` (réel, de SimpleRene) |
+| `label:` sur chaque description | **Oui** | Une String, **unique** dans le container — Ψ (`readDescription:`/`relabelDescription:`/`removeField:`) identifie un champ par son label ; un doublon rend le second champ inaccessible à Ψ |
+| `accessor:` sur chaque description | **Oui** | Un Symbol correspondant à un getter/setter d'instance sur `MaClasse` (ex: `#nom` requiert `nom`/`nom:`) |
+| `priority:` sur chaque description | Recommandé | Un Integer — `SRPriorityContainer` trie ses enfants par priorité ; sans cette valeur, l'ordre d'affichage n'est pas garanti |
+| `level:` sur chaque description | Recommandé | `#simple`, `#base` ou `#expert` — sans cette valeur, `#simple` s'applique par défaut (valeur de repli dans `SRDescription >> level`, extension AXPL) |
+| `comment:` sur chaque description | Optionnel | Une String (même explication à tous les niveaux) ou un `Dictionary` clé = niveau (② — explicabilité graduée, ex: `Dictionary new at: #simple put: '...'; at: #expert put: '...'; yourself`) |
+| `properties` sur `MaClasse` | Nécessaire **seulement** pour Ψ | `^ properties ifNil: [ properties := Dictionary new ]` — requis uniquement si vous voulez que `AXPLReflexivityEngine>>createField:type:level:` puisse ajouter un champ à l'exécution sans variable d'instance dédiée (voir `SRPluggableAccessor`) |
+
+### Classes de description disponibles
+
+Toutes réelles, de SimpleRene, étendues par `AXPL-Descriptions` (jamais réimplémentées) :
+
+- `SRStringDescription` — texte
+- `SRNumberDescription` — nombre (`bePositive` pour valider > 0)
+- `SRBooleanDescription` — case à cocher
+- `SRDateDescription` — date
+- `SRSingleOptionDescription` — liste déroulante (requiert aussi `options: #('A' 'B' ...)`)
+
+Validation native de SimpleRene, transparente avec AXPL : `beRequired`, `bePositive`, `addCondition: [ :v | ... ] labelled: 'message'`.
+
+### Exemple minimal
+
+```st
+Object subclass: #Produit
+    instanceVariableNames: 'nom prix'
+    classVariableNames: ''
+    package: 'MonAppli'.
+
+Produit class >> descriptionForAXPL [
+    | container |
+    container := SRPriorityContainer new.
+    container add: (SRStringDescription new
+        label: 'Nom'; accessor: #nom; priority: 10; level: #simple; beRequired).
+    container add: (SRNumberDescription new
+        label: 'Prix'; accessor: #prix; priority: 20; level: #simple; bePositive).
+    ^ container
+]
+
+"accessor: #nom exige un getter/setter d'instance — ici générés par
+l'outil 'Create accessors' du navigateur, ou écrits à la main :"
+Produit >> nom [ ^ nom ]
+Produit >> nom: anObject [ nom := anObject ]
+Produit >> prix [ ^ prix ]
+Produit >> prix: anObject [ prix := anObject ]
+```
+
+Puis, exactement comme avec `ClientHopital` ou `Etudiant` : `AXPLFramework for: Produit new`, ou `SRFormApp new targetObject: Produit new; open`. **Aucune ligne du framework à modifier.**
+
+Votre classe métier n'a pas à vivre dans un package AXPL — `AXPL-Examples` n'est qu'une démonstration ; la vôtre vit dans votre propre package, qui ne requiert qu'`AXPL-Descriptions` dans sa baseline.
+
 ## Architecture
 
 Le framework intègre nativement quatre dimensions autour d'une méta-description unique :
