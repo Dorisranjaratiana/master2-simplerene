@@ -17,6 +17,13 @@ Class {
 	#package : 'AXPL-Core'
 }
 
+{ #category : 'accessing' }
+AXPLFormBuilder class >> levels [
+    "Source unique des niveaux reconnus par le framework, du moins au plus
+    privilégié — le moteur Ψ s'en sert aussi pour valider un niveau."
+    ^ #( #simple #base #expert )
+]
+
 { #category : 'building' }
 AXPLFormBuilder >> build [
     metaContainer ifNil: [
@@ -55,8 +62,8 @@ AXPLFormBuilder >> userLevel: aSymbol [
 	auparavant traité silencieusement comme #simple (aucun des = ne
 	matchait) — dangereux maintenant qu'AXPLWebServer accepte ce niveau
 	depuis une requête HTTP externe non fiable."
-	(#(#simple #base #expert) includes: aSymbol) ifFalse: [
+	(self class levels includes: aSymbol) ifFalse: [
 		Error signal: 'Niveau invalide : ' , aSymbol printString ,
-			' (attendu #simple, #base ou #expert)' ].
+			' (attendu l''un de ' , self class levels printString , ')' ].
 	userLevel := aSymbol
 ]

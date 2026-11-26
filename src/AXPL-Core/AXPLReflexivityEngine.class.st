@@ -55,10 +55,21 @@ AXPLReflexivityEngine >> assertLabelAvailable: aLabel [
         Error signal: 'Un champ "' , aLabel , '" existe déjà.' ]
 ]
 
+{ #category : 'private' }
+AXPLReflexivityEngine >> assertValidLevel: aLevel [
+    "Un niveau inconnu (#inconnu, faute de frappe, chaîne reçue du web...)
+    rendrait le champ invisible à tous les niveaux sauf #expert, sans
+    aucune erreur : on refuse plutôt que de le cacher silencieusement."
+    (AXPLFormBuilder levels includes: aLevel) ifFalse: [
+        Error signal: 'Niveau invalide : ' , aLevel printString ,
+            ' (attendu l''un de ' , AXPLFormBuilder levels printString , ')' ]
+]
+
 { #category : 'intercession' }
 AXPLReflexivityEngine >> createField: aLabel type: aDescriptionClass level: aLevel [
     "⑥ Crée un nouveau champ (String/Number/Boolean/Date) à l'exécution."
     | desc key |
+    self assertValidLevel: aLevel.
     self assertLabelAvailable: aLabel.
     key := self accessorKeyFor: aLabel.
     desc := aDescriptionClass new
@@ -76,6 +87,7 @@ AXPLReflexivityEngine >> createField: aLabel type: aDescriptionClass level: aLev
 AXPLReflexivityEngine >> createSelectionField: aLabel options: aCollection level: aLevel [
     "⑥ Crée un nouveau champ à choix (SRSingleOptionDescription) à l'exécution."
     | desc key |
+    self assertValidLevel: aLevel.
     self assertLabelAvailable: aLabel.
     key := self accessorKeyFor: aLabel.
     desc := SRSingleOptionDescription new
@@ -129,23 +141,25 @@ AXPLReflexivityEngine >> readDescription: aLabel [
 
 { #category : 'intercession' }
 AXPLReflexivityEngine >> relabelDescription: oldLabel to: newLabel [
+    "④ Ne touche QU'AU label : les explications graduées par niveau (②)
+    décrivent toujours le même champ et doivent survivre au renommage.
+    L'ancien label et l'horodatage vont dans le traceLog [t], pas dans
+    le commentaire."
     | desc |
     desc := self readDescription: oldLabel.
-    desc ifNotNil: [
-        desc label: newLabel.
-        desc comment: (
-            'Champ : ' , newLabel
-            , ' | Niveau : ' , desc level asString
-            , ' | Modifié par Ψ le : ' , DateAndTime now printString
-            , ' | Ancien label : ' , oldLabel).
-        traceLog add: (Association
-            key: DateAndTime now
-            value: ('Rename: ' , oldLabel , ' → ' , newLabel)) ].
+    desc ifNil: [ ^ self ].
+    oldLabel = newLabel ifTrue: [ ^ self ].
+    self assertLabelAvailable: newLabel.
+    desc label: newLabel.
+    traceLog add: (Association
+        key: DateAndTime now
+        value: ('Rename: ' , oldLabel , ' → ' , newLabel)).
 ]
 
 { #category : 'intercession' }
 AXPLReflexivityEngine >> setLevel: aNewLevel ofDescription: aLabel [
     | desc |
+    self assertValidLevel: aNewLevel.
     desc := metaContainer children
         detect: [ :d | d label = aLabel ]
         ifNone: [ ^ self ].
@@ -163,6 +177,7 @@ AXPLReflexivityEngine >> traceLog [
 { #category : 'intercession' }
 AXPLReflexivityEngine >> updateExplanation: aLabel forLevel: aLevel with: aText [
     | desc raw |
+    self assertValidLevel: aLevel.
     desc := self readDescription: aLabel.
     desc ifNotNil: [
         raw := desc comment.

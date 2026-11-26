@@ -136,3 +136,51 @@ AXPLReflexivityEngineTest >> testTracabilite [
 	 self assert: (engine traceLog first key isKindOf: DateAndTime).
 	 self assert: (engine traceLog first value includesSubstring: 'Nom')
 ]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testRenommageConserveLesExplicationsGraduees [
+    "Régression : relabelDescription:to: remplaçait le Dictionary des
+    explications par niveau (②) par une String technique ; après un
+    renommage, chaque niveau affichait 'Champ : ... | Niveau : ...'."
+    | desc simpleAvant expertAvant |
+    desc := engine readDescription: 'Allergies'.
+    simpleAvant := desc commentFor: #simple.
+    expertAvant := desc commentFor: #expert.
+    engine relabelDescription: 'Allergies' to: 'Risques Anaphylactiques'.
+    self assert: (desc commentFor: #simple) equals: simpleAvant.
+    self assert: (desc commentFor: #expert) equals: expertAvant.
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testRenommageVersLabelExistantRefuse [
+    "Régression : renommer 'Nom' en 'Prénom' créait deux champs 'Prénom',
+    le second devenant inaccessible à readDescription:."
+    self
+        should: [ engine relabelDescription: 'Nom' to: 'Prénom' ]
+        raise: Error.
+    self assert: (engine readDescription: 'Nom') notNil.
+    self assert: ((container children select: [ :d | d label = 'Prénom' ]) size) equals: 1.
+    self assert: engine traceLog isEmpty.
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testRenommageVersLeMemeLabelNeFaitRien [
+    engine relabelDescription: 'Nom' to: 'Nom'.
+    self assert: (engine readDescription: 'Nom') notNil.
+    self assert: engine traceLog isEmpty.
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testNiveauInvalideRefuseParPsi [
+    "Régression : un niveau inconnu rendait le champ invisible partout
+    sauf en #expert, sans aucune erreur."
+    | tailleAvant |
+    tailleAvant := container children size.
+    self should: [ engine setLevel: #inconnu ofDescription: 'Allergies' ] raise: Error.
+    self should: [ engine createField: 'X' type: SRStringDescription level: #inconnu ] raise: Error.
+    self should: [ engine createSelectionField: 'Y' options: #('a') level: #inconnu ] raise: Error.
+    self should: [ engine updateExplanation: 'Nom' forLevel: #inconnu with: 'texte' ] raise: Error.
+    self assert: (engine readDescription: 'Allergies') level equals: #expert.
+    self assert: container children size equals: tailleAvant.
+    self assert: engine traceLog isEmpty.
+]

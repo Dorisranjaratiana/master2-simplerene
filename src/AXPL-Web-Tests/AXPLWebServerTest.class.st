@@ -180,3 +180,17 @@ AXPLWebServerTest >> testPsiRemoveFieldRouteSupprimeLeChamp [
     json := server formJsonFor: #expert.
     self deny: ((json at: #fields) anySatisfy: [ :f | (f at: #label) = 'Note interne' ]).
 ]
+
+{ #category : 'tests' }
+AXPLWebServerTest >> testPsiSetLevelRouteNiveauInvalideRenvoieErreur [
+    "Le niveau arrive en texte libre depuis le web : un niveau inconnu doit
+    produire une erreur JSON propre, pas un champ caché silencieusement."
+    | server request result allergies |
+    server := AXPLWebServer new targetObject: client; yourself.
+    request := AXPLFakeWebRequest withJson: '{"label":"Allergies","level":"inconnu"}'.
+    result := server safely: [ server psiSetLevel: request ].
+    self assert: (result at: #error) notNil.
+    allergies := ((server formJsonFor: #expert) at: #fields)
+        detect: [ :f | (f at: #label) = 'Allergies' ].
+    self assert: (allergies at: #level) equals: 'expert'.
+]

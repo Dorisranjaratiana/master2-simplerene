@@ -226,7 +226,7 @@ SRFormApp >> runPsiCreateField [
     (niveauChoix isNil or: [ niveauChoix = 0 ]) ifTrue: [ ^ self ].
     niveau := (niveaux at: niveauChoix) asSymbol.
 
-    typeChoix = 5
+    [ typeChoix = 5
         ifTrue: [
             | optionsText options |
             optionsText := UIManager default
@@ -237,7 +237,9 @@ SRFormApp >> runPsiCreateField [
             psiEngine createSelectionField: label options: options level: niveau ]
         ifFalse: [
             typeClasses := { SRStringDescription. SRNumberDescription. SRBooleanDescription. SRDateDescription }.
-            psiEngine createField: label type: (typeClasses at: typeChoix) level: niveau ].
+            psiEngine createField: label type: (typeClasses at: typeChoix) level: niveau ] ]
+        on: Error
+        do: [ :err | ^ self inform: 'Ψ refusé : ' , err messageText ].
 
     self inform:
         'Ψ : champ "' , label , '" créé.'
@@ -280,7 +282,9 @@ SRFormApp >> runPsiEditField: aLabel [
             (UIManager default confirm:
                 'Renommer "' , aLabel , '" en "' , nouveauLabel , '" ?')
                 ifTrue: [
-                    psiEngine relabelDescription: aLabel to: nouveauLabel.
+                    [ psiEngine relabelDescription: aLabel to: nouveauLabel ]
+                        on: Error
+                        do: [ :err | ^ self inform: 'Ψ refusé : ' , err messageText ].
                     self inform:
                         'Ψ : "' , aLabel , '" → "' , nouveauLabel , '".'
                         , String cr
