@@ -8,6 +8,10 @@ corps JSON réel (AXPLFakeWebRequest simule l'unique enchaînement
 serveur Teapot). Couvre la régression propertyNamesAsSymbols : sans
 elle, `body at: #label` échouait sur toute requête HTTP réelle car
 NeoJSONReader parse les clés d'objet JSON en String par défaut.
+
+Package séparé d'AXPL-Tests : seul ce package dépend d'AXPL-Web (donc
+de Teapot/NeoJSON) — charger le groupe #core de la baseline (sans le
+web) n'a donc pas besoin de ces tests ni de leurs dépendances.
 "
 Class {
 	#name : 'AXPLWebServerTest',
@@ -15,8 +19,8 @@ Class {
 	#instVars : [
 		'client'
 	],
-	#category : 'AXPL-Tests',
-	#package : 'AXPL-Tests'
+	#category : 'AXPL-Web-Tests',
+	#package : 'AXPL-Web-Tests'
 }
 
 { #category : 'running' }

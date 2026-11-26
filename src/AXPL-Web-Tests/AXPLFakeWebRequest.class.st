@@ -12,8 +12,8 @@ Class {
 	#instVars : [
 		'jsonString'
 	],
-	#category : 'AXPL-Tests',
-	#package : 'AXPL-Tests'
+	#category : 'AXPL-Web-Tests',
+	#package : 'AXPL-Web-Tests'
 }
 
 { #category : 'instance creation' }

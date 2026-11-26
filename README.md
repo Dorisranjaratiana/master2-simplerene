@@ -4,11 +4,22 @@ Framework Low-Code pour le pilotage natif des interfaces adaptatives.
 
 ## Chargement en une ligne (Pharo 13)
 
+Un chargement simple reste **100% côté Pharo** : SimpleRene, les moteurs ①Ψ, l'UI desktop (Spec2) et l'export JSON, sans toucher à Teapot/NeoJSON ni au serveur HTTP.
+
 ```st
 Metacello new
     baseline: 'AXPL';
     repository: 'github://Dorisranjaratiana/master2-simplerene:integration-simplerene/src';
     load.
+```
+
+Pour charger en plus la partie web (serveur HTTP `AXPL-Web`, Teapot, NeoJSON) :
+
+```st
+Metacello new
+    baseline: 'AXPL';
+    repository: 'github://Dorisranjaratiana/master2-simplerene:integration-simplerene/src';
+    load: #('web').
 ```
 
 ## Utilisation
@@ -42,8 +53,11 @@ Le framework intègre nativement quatre dimensions autour d'une méta-descriptio
 - `AXPL-Core` — Moteurs A et Ψ
 - `AXPL-UI` — Interface L (desktop, Spec2)
 - `AXPL-Json` — Export JSON pur (aucune dépendance Spec2), pour un frontend web séparé
-- `AXPL-Web` — API HTTP ([Teapot](https://github.com/zeroflag/Teapot) + [NeoJSON](https://github.com/svenvc/NeoJSON)) exposant AXPL-Json et Ψ à un frontend externe (React, etc.)
-- `AXPL-Tests` — suite de tests unitaires
+- `AXPL-Web` *(groupe `web` uniquement)* — API HTTP ([Teapot](https://github.com/zeroflag/Teapot) + [NeoJSON](https://github.com/svenvc/NeoJSON)) exposant AXPL-Json et Ψ à un frontend externe (React, etc.)
+- `AXPL-Tests` — suite de tests unitaires (①, Ψ, ⑦, généricité, extensions SimpleRene) — groupe `core`
+- `AXPL-Web-Tests` *(groupe `web` uniquement)* — tests du serveur HTTP, seul package avec `AXPL-Web` à dépendre de Teapot/NeoJSON
+
+Un chargement par défaut (`load.`) tire le groupe `default` = `core` = tout sauf `AXPL-Web`/`AXPL-Web-Tests`. C'est volontaire : le framework reste utilisable et testable 100% côté Pharo sans jamais toucher à une dépendance web, celle-ci n'étant chargée qu'à la demande (`load: #('web')`).
 
 ## Dépendance
 
@@ -56,6 +70,8 @@ AXPL **dépend réellement** de [SimpleRene](https://github.com/pharo-contributi
 `AXPLVisitor` (dans `AXPL-Core`) est le contrat abstrait de génération, indépendant de tout toolkit UI. `AXPL-UI` (Spec2, desktop) et `AXPL-Json` (export JSON, pour un frontend web séparé) en sont deux implémentations concrètes, chacune ne dépendant que d'`AXPL-Core` — jamais l'une de l'autre.
 
 ### Serveur web (AXPL-Web)
+
+Charger d'abord le groupe `web` (voir plus haut) — `AXPL-Web` n'est pas chargé par un `load.` par défaut :
 
 ```st
 AXPLWebServer onPort: 8080 forTargetObject: ClientHopital new.

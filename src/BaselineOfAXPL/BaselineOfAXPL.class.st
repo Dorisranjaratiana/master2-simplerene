@@ -38,12 +38,25 @@ BaselineOfAXPL >> baseline: spec [
         pour un frontend séparé type React) sont trois implémentations
         concrètes d'AXPLVisitor/AXPLReflexivityEngine, chacune ne dépendant
         que d'AXPL-Core — jamais l'une de l'autre. C'est ce qui rend le
-        portage vers d'autres cibles possible sans dupliquer A/X/Ψ."
+        portage vers d'autres cibles possible sans dupliquer A/X/Ψ.
+        AXPL-Web-Tests est séparé d'AXPL-Tests pour la même raison que
+        AXPL-Web lui-même : c'est le SEUL package qui a besoin de
+        Teapot/NeoJSON, donc le seul exclu du groupe #core ci-dessous."
         spec
             package: 'AXPL-Descriptions' with: [ spec requires: #('SimpleRene') ];
             package: 'AXPL-Core' with: [ spec requires: #('AXPL-Descriptions') ];
             package: 'AXPL-UI' with: [ spec requires: #('AXPL-Core') ];
             package: 'AXPL-Json' with: [ spec requires: #('AXPL-Core') ];
             package: 'AXPL-Web' with: [ spec requires: #('AXPL-Json' 'Teapot' 'NeoJSON') ];
-            package: 'AXPL-Tests' with: [ spec requires: #('AXPL-Core' 'AXPL-Json' 'AXPL-Web') ] ]
+            package: 'AXPL-Tests' with: [ spec requires: #('AXPL-Core' 'AXPL-Json') ];
+            package: 'AXPL-Web-Tests' with: [ spec requires: #('AXPL-Web') ].
+
+        "Groupes de chargement : un simple `load` (sans groupe précisé)
+        charge #default, donc reste 100% côté Pharo — Teapot/NeoJSON et
+        le serveur HTTP ne sont tirés que par un `load: #('web')`
+        explicite, au moment où on veut vraiment la partie web."
+        spec
+            group: 'core' with: #('AXPL-UI' 'AXPL-Json' 'AXPL-Tests');
+            group: 'web' with: #('AXPL-Web' 'AXPL-Web-Tests');
+            group: 'default' with: #('core') ]
 ]
