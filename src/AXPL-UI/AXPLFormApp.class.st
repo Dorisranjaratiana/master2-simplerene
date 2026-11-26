@@ -218,10 +218,10 @@ AXPLFormApp >> showNeutralState [
 
 { #category : 'psi' }
 AXPLFormApp >> runPsiCreateField [
-    "⑥ Ψ crée un champ entièrement nouveau dans le metaContainer, adossé
+    "⑥② Ψ crée un champ entièrement nouveau dans le metaContainer, adossé
     au dictionnaire #properties de targetObject plutôt qu'à une variable
-    d'instance."
-    | types typeChoix label niveaux niveauChoix niveau typeClasses |
+    d'instance — avec son explication, facultative, dès la création."
+    | types typeChoix label niveaux niveauChoix niveau typeClasses options explication |
     types := #( 'Texte' 'Nombre' 'Booléen' 'Date' 'Choix' ).
     typeChoix := UIManager default
         chooseFrom: types
@@ -240,18 +240,34 @@ AXPLFormApp >> runPsiCreateField [
     (niveauChoix isNil or: [ niveauChoix = 0 ]) ifTrue: [ ^ self ].
     niveau := (niveaux at: niveauChoix) asSymbol.
 
+    typeChoix = 5 ifTrue: [
+        | optionsText |
+        optionsText := UIManager default
+            request: 'Ψ — Options séparées par des virgules :'
+            initialAnswer: ''.
+        (optionsText isNil or: [ optionsText isEmpty ]) ifTrue: [ ^ self ].
+        options := self parseOptions: optionsText ].
+
+    "Facultative : laisser vide (ou fermer) crée le champ sans aide ;
+    elle reste modifiable ensuite par Ψ → Modifier → l'explication."
+    explication := UIManager default
+        request: 'Ψ — Explication ② de "' , label , '" (aide affichée au survol, facultative) :'
+        initialAnswer: ''.
+
     [ typeChoix = 5
         ifTrue: [
-            | optionsText options |
-            optionsText := UIManager default
-                request: 'Ψ — Options séparées par des virgules :'
-                initialAnswer: ''.
-            (optionsText isNil or: [ optionsText isEmpty ]) ifTrue: [ ^ self ].
-            options := self parseOptions: optionsText.
-            self psiEngine createSelectionField: label options: options level: niveau ]
+            self psiEngine
+                createSelectionField: label
+                options: options
+                level: niveau
+                explanation: explication ]
         ifFalse: [
             typeClasses := { SRStringDescription. SRNumberDescription. SRBooleanDescription. SRDateDescription }.
-            self psiEngine createField: label type: (typeClasses at: typeChoix) level: niveau ] ]
+            self psiEngine
+                createField: label
+                type: (typeClasses at: typeChoix)
+                level: niveau
+                explanation: explication ] ]
         on: Error
         do: [ :err | ^ self inform: 'Ψ refusé : ' , err messageText ].
 
@@ -263,11 +279,66 @@ AXPLFormApp >> runPsiCreateField [
 ]
 
 { #category : 'psi' }
+AXPLFormApp >> explanationTargets [
+    "Choix proposés pour modifier une explication : un niveau précis, ou
+    tous les niveaux à la fois."
+    ^ (AXPLFormBuilder levels collect: [ :each | each asString ]) asArray
+        , #( 'Tous les niveaux' )
+]
+
+{ #category : 'psi' }
+AXPLFormApp >> currentExplanationOf: aLabel forTarget: anIndex [
+    "Texte proposé dans le dialogue : l'explication actuelle du niveau
+    choisi, ou celle du niveau du champ pour 'Tous les niveaux'."
+    | desc levels |
+    desc := self psiEngine readDescription: aLabel.
+    desc ifNil: [ ^ '' ].
+    levels := AXPLFormBuilder levels.
+    ^ desc commentFor: (anIndex <= levels size
+        ifTrue: [ levels at: anIndex ]
+        ifFalse: [ desc level ])
+]
+
+{ #category : 'psi' }
+AXPLFormApp >> applyExplanation: aText to: aLabel forTarget: anIndex [
+    "Applique l'explication via le moteur Ψ (donc tracée) au niveau
+    choisi dans explanationTargets."
+    | levels |
+    levels := AXPLFormBuilder levels.
+    anIndex <= levels size
+        ifTrue: [ self psiEngine updateExplanation: aLabel forLevel: (levels at: anIndex) with: aText ]
+        ifFalse: [ self psiEngine updateExplanation: aLabel with: aText ]
+]
+
+{ #category : 'psi' }
+AXPLFormApp >> runPsiEditExplanation: aLabel [
+    "⑤② Ψ modifie l'explication d'un champ, pour un niveau ou pour tous."
+    | cibles cible texte |
+    cibles := self explanationTargets.
+    cible := UIManager default
+        chooseFrom: cibles
+        title: 'Ψ — Explication de "' , aLabel , '" pour quel niveau ?'.
+    (cible isNil or: [ cible = 0 ]) ifTrue: [ ^ self ].
+    texte := UIManager default
+        request: 'Ψ — Explication ② de "' , aLabel , '" (' , (cibles at: cible) , ') :'
+        initialAnswer: (self currentExplanationOf: aLabel forTarget: cible).
+    texte ifNil: [ ^ self ].
+    [ self applyExplanation: texte to: aLabel forTarget: cible ]
+        on: Error
+        do: [ :err | ^ self inform: 'Ψ refusé : ' , err messageText ].
+    self inform:
+        'Ψ : explication de "' , aLabel , '" mise à jour (' , (cibles at: cible) , ').'
+        , String cr
+        , 'Horodatage : ' , DateAndTime now printString.
+    self updateInterface.
+]
+
+{ #category : 'psi' }
 AXPLFormApp >> runPsiEditField: aLabel [
-    "④⑨ Ψ change le niveau ou renomme un champ existant."
+    "④⑨⑤ Ψ change le niveau, renomme ou réexplique un champ existant."
     | choix |
     choix := UIManager default
-        chooseFrom: #( 'Changer le niveau' 'Modifier le label' )
+        chooseFrom: #( 'Changer le niveau' 'Modifier le label' 'Modifier l''explication' )
         title: 'Ψ — Que voulez-vous modifier sur "' , aLabel , '" ?'.
     choix = 1 ifTrue: [
         | niveauChoix niveaux nouveauNiveau |
@@ -304,6 +375,7 @@ AXPLFormApp >> runPsiEditField: aLabel [
                         , String cr
                         , 'Horodatage : ' , DateAndTime now printString.
                     self updateInterface ] ] ].
+    choix = 3 ifTrue: [ self runPsiEditExplanation: aLabel ].
 ]
 
 { #category : 'psi' }

@@ -10,7 +10,8 @@ Routes :
   POST /field        {label, value}     → écrit une valeur (validée avant écriture)
   POST /psi/rename       {oldLabel, newLabel}
   POST /psi/set-level    {label, level}
-  POST /psi/create-field {label, type, level, options?}
+  POST /psi/create-field {label, type, level, options?, explanation?}
+  POST /psi/explain      {label, text, level?}  (sans level : tous niveaux)
   POST /psi/remove-field {label}
   GET  /psi/trace                       → historique horodaté Ψ
 
@@ -126,9 +127,10 @@ AXPLWebServer >> safely: aBlock [
 AXPLWebServer >> psiCreateField: aRequest [
 	"⑥ — les mêmes classes de description que côté desktop, choisies
 	depuis le type texte reçu du frontend."
-	| body typeClasses type level label |
+	| body typeClasses type level label explanation |
 	body := self jsonBodyOf: aRequest.
 	label := body at: #label.
+	explanation := body at: #explanation ifAbsent: [ nil ].
 	level := (body at: #level) asSymbol.
 	type := body at: #type.
 	type = 'select'
@@ -136,7 +138,8 @@ AXPLWebServer >> psiCreateField: aRequest [
 			framework psiEngine
 				createSelectionField: label
 				options: (body at: #options)
-				level: level ]
+				level: level
+				explanation: explanation ]
 		ifFalse: [
 			typeClasses := Dictionary new
 				at: 'string' put: SRStringDescription;
@@ -147,7 +150,24 @@ AXPLWebServer >> psiCreateField: aRequest [
 			framework psiEngine
 				createField: label
 				type: (typeClasses at: type)
-				level: level ].
+				level: level
+				explanation: explanation ].
+	^ self ok
+]
+
+{ #category : 'psi' }
+AXPLWebServer >> psiExplain: aRequest [
+	"⑤② — explication d'un champ pour un niveau, ou pour tous si le corps
+	ne donne pas de level."
+	| body |
+	body := self jsonBodyOf: aRequest.
+	(body at: #level ifAbsent: [ nil ])
+		ifNil: [ framework psiEngine updateExplanation: (body at: #label) with: (body at: #text) ]
+		ifNotNil: [ :level |
+			framework psiEngine
+				updateExplanation: (body at: #label)
+				forLevel: level asSymbol
+				with: (body at: #text) ].
 	^ self ok
 ]
 
@@ -204,6 +224,7 @@ AXPLWebServer >> start: aPort [
 		POST: '/psi/set-level' -> [ :req | self safely: [ self psiSetLevel: req ] ];
 		POST: '/psi/create-field' -> [ :req | self safely: [ self psiCreateField: req ] ];
 		POST: '/psi/remove-field' -> [ :req | self safely: [ self psiRemoveField: req ] ];
+		POST: '/psi/explain' -> [ :req | self safely: [ self psiExplain: req ] ];
 		GET: '/psi/trace' -> [ :req | self safely: [ self traceJson ] ].
 	teapot start.
 ]

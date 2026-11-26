@@ -226,3 +226,42 @@ AXPLWebServerTest >> testWriteFieldRenvoieLeMessageDeSimpleRene [
     age := client class descriptionForAXPL children detect: [ :d | d label = 'Âge' ].
     self assert: (result at: #error) equals: (age validationMessageFor: -5) asString.
 ]
+
+{ #category : 'tests' }
+AXPLWebServerTest >> testPsiCreateFieldRouteAvecExplication [
+    "POST /psi/create-field avec explanation — ⑥② : l'aide arrive dans le JSON du formulaire."
+    | server request result champ |
+    server := AXPLWebServer new targetObject: client; yourself.
+    request := AXPLFakeWebRequest withJson:
+        '{"label":"Note interne","type":"string","level":"base","explanation":"Remarque libre."}'.
+    result := server safely: [ server psiCreateField: request ].
+    self assert: (result at: #ok) equals: true.
+    champ := ((server formJsonFor: #base) at: #fields) detect: [ :f | (f at: #label) = 'Note interne' ].
+    self assert: (champ at: #help) equals: 'Remarque libre.'.
+]
+
+{ #category : 'tests' }
+AXPLWebServerTest >> testPsiExplainRoutePourUnNiveau [
+    "POST /psi/explain {label, text, level} — ⑤② pour un seul niveau."
+    | server request result help |
+    server := AXPLWebServer new targetObject: client; yourself.
+    request := AXPLFakeWebRequest withJson: '{"label":"Nom","text":"Nom de naissance.","level":"expert"}'.
+    result := server safely: [ server psiExplain: request ].
+    self assert: (result at: #ok) equals: true.
+    help := [ :lvl | (((server formJsonFor: lvl) at: #fields) detect: [ :f | (f at: #label) = 'Nom' ]) at: #help ].
+    self assert: (help value: #expert) equals: 'Nom de naissance.'.
+    self deny: (help value: #simple) equals: 'Nom de naissance.'.
+]
+
+{ #category : 'tests' }
+AXPLWebServerTest >> testPsiExplainRouteSansNiveauVautPourTous [
+    | server request result |
+    server := AXPLWebServer new targetObject: client; yourself.
+    request := AXPLFakeWebRequest withJson: '{"label":"Nom","text":"Nom de famille."}'.
+    result := server safely: [ server psiExplain: request ].
+    self assert: (result at: #ok) equals: true.
+    AXPLFormBuilder levels do: [ :lvl |
+        self
+            assert: ((((server formJsonFor: lvl) at: #fields) detect: [ :f | (f at: #label) = 'Nom' ]) at: #help)
+            equals: 'Nom de famille.' ].
+]

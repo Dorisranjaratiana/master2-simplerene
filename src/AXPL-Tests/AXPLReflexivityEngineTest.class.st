@@ -184,3 +184,111 @@ AXPLReflexivityEngineTest >> testNiveauInvalideRefuseParPsi [
     self assert: container children size equals: tailleAvant.
     self assert: engine traceLog isEmpty.
 ]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testCreationAvecExplicationPsi [
+    "⑥② Un champ créé par Ψ a son explication dès la création, à tous
+    les niveaux — comme les champs déclarés dans descriptionForAXPL."
+    | desc |
+    desc := engine
+        createField: 'Note interne'
+        type: SRStringDescription
+        level: #base
+        explanation: 'Remarque libre du soignant.'.
+    AXPLFormBuilder levels do: [ :lvl |
+        self assert: (desc commentFor: lvl) equals: 'Remarque libre du soignant.' ].
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testCreationChampSelectionAvecExplicationPsi [
+    | desc |
+    desc := engine
+        createSelectionField: 'Groupe sanguin'
+        options: #('A' 'B' 'AB' 'O')
+        level: #base
+        explanation: 'Indispensable avant une transfusion.'.
+    self assert: (desc commentFor: #expert) equals: 'Indispensable avant une transfusion.'.
+    self assert: desc options equals: #('A' 'B' 'AB' 'O').
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testCreationSansExplicationPsi [
+    "Explication facultative : absente ou vide, le champ n'a pas d'aide
+    (et pas de texte parasite comme 'nil')."
+    self
+        assert: ((engine createField: 'A' type: SRStringDescription level: #base) commentFor: #base)
+        equals: ''.
+    self
+        assert: ((engine createField: 'B' type: SRStringDescription level: #base explanation: '') commentFor: #base)
+        equals: ''.
+    self assert: engine traceLog size equals: 2.
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testExplicationDUnNiveauConserveLesAutres [
+    "Régression : updateExplanation:forLevel:with: remplaçait une aide
+    commune (String) par un Dictionary ne contenant QUE le niveau modifié
+    — les autres niveaux perdaient leur explication."
+    | desc |
+    desc := engine
+        createField: 'Note interne'
+        type: SRStringDescription
+        level: #simple
+        explanation: 'Aide commune.'.
+    engine updateExplanation: 'Note interne' forLevel: #expert with: 'Aide experte.'.
+    self assert: (desc commentFor: #expert) equals: 'Aide experte.'.
+    self assert: (desc commentFor: #simple) equals: 'Aide commune.'.
+    self assert: (desc commentFor: #base) equals: 'Aide commune.'.
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testExplicationDUnNiveauSurUnChampDeclare [
+    "Sur un champ déclaré (Dictionary par niveau), seul le niveau visé change."
+    | desc simpleAvant |
+    desc := engine readDescription: 'Nom'.
+    simpleAvant := desc commentFor: #simple.
+    engine updateExplanation: 'Nom' forLevel: #expert with: 'Nom de naissance (état civil).'.
+    self assert: (desc commentFor: #expert) equals: 'Nom de naissance (état civil).'.
+    self assert: (desc commentFor: #simple) equals: simpleAvant.
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testExplicationPourTousLesNiveaux [
+    | desc |
+    engine updateExplanation: 'Nom' with: 'Nom de famille du patient.'.
+    desc := engine readDescription: 'Nom'.
+    AXPLFormBuilder levels do: [ :lvl |
+        self assert: (desc commentFor: lvl) equals: 'Nom de famille du patient.' ].
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testExplicationTracee [
+    "[t] Changer une explication est une intercession comme les autres."
+    engine updateExplanation: 'Nom' forLevel: #base with: 'texte'.
+    self assert: (engine traceLog last key isKindOf: DateAndTime).
+    self assert: (engine traceLog last value includesSubstring: 'Explication').
+    self assert: (engine traceLog last value includesSubstring: 'Nom').
+    engine updateExplanation: 'Prénom' with: 'texte'.
+    self assert: engine traceLog size equals: 2.
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testExplicationChampInexistantNeFaitRien [
+    engine updateExplanation: 'ChampInexistant' forLevel: #base with: 'texte'.
+    engine updateExplanation: 'ChampInexistant' with: 'texte'.
+    self assert: engine traceLog isEmpty.
+]
+
+{ #category : 'tests' }
+AXPLReflexivityEngineTest >> testExplicationDUnChampPsiSurvitAuxIntercessions [
+    "L'aide reste attachée au champ quand Ψ le renomme ou change son niveau."
+    | desc |
+    desc := engine
+        createField: 'Note interne'
+        type: SRStringDescription
+        level: #expert
+        explanation: 'Réservé à l''équipe soignante.'.
+    engine relabelDescription: 'Note interne' to: 'Note clinique'.
+    engine setLevel: #base ofDescription: 'Note clinique'.
+    self assert: (desc commentFor: #base) equals: 'Réservé à l''équipe soignante.'.
+]

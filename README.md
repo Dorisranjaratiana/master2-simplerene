@@ -31,6 +31,11 @@ Metacello new
 
 ## Versions
 
+**En développement** (branche `integration-simplerene`, après v1.0.0) :
+- Ψ ② : un champ créé par Ψ reçoit son explication dès la création (facultative) ; *Ψ → Modifier un champ → Modifier l'explication* change l'aide d'un champ, pour un niveau ou pour tous, sans effacer celle des autres niveaux ; chaque changement d'explication est tracé
+- web : `explanation` facultatif dans `POST /psi/create-field`, nouvelle route `POST /psi/explain`
+- 105 tests
+
 **v1.0.0** — première version stable :
 - dépendance réelle à SimpleRene (extensions, jamais de réimplémentation), Teapot et NeoJSON — toutes épinglées sur un commit
 - façade `AXPLFramework`, protocole d'extension `descriptionForAXPL` documenté
@@ -69,6 +74,11 @@ Un point d'entrée unique cache l'assemblage manuel de ① et Ψ (dériver le me
 framework := AXPLFramework for: ClientHopital new.
 visible := framework visibleFieldsAt: #simple.    "① — filtrage par niveau"
 framework psiEngine createField: 'Note interne' type: SRStringDescription level: #expert.    "Ψ"
+framework psiEngine
+    createField: 'Groupe sanguin' type: SRStringDescription level: #base
+    explanation: 'Indispensable avant une transfusion.'.    "Ψ ② — avec son aide"
+framework psiEngine updateExplanation: 'Nom' forLevel: #expert with: 'Nom d''état civil.'.    "② un niveau"
+framework psiEngine updateExplanation: 'Nom' with: 'Nom de famille.'.    "② tous les niveaux"
 ```
 
 Tous les visiteurs se construisent de la même façon, avec l'objet métier et le niveau — le visiteur Spec2 demande en plus un presenter pour ses widgets :
@@ -206,7 +216,8 @@ Routes disponibles (CORS ouvert, pratique pour un frontend en développement loc
 | `POST /field` `{label, value}` | Écrit une valeur validée ; sinon `{error}` contient le message de SimpleRene (champ requis, condition non respectée…) |
 | `POST /psi/rename` `{oldLabel, newLabel}` | Ψ — renomme un champ |
 | `POST /psi/set-level` `{label, level}` | Ψ — change le niveau d'un champ |
-| `POST /psi/create-field` `{label, type, level, options?}` | Ψ — crée un champ (`type` : `string`/`number`/`boolean`/`date`/`select`) |
+| `POST /psi/create-field` `{label, type, level, options?, explanation?}` | Ψ — crée un champ (`type` : `string`/`number`/`boolean`/`date`/`select`), avec son explication ② facultative |
+| `POST /psi/explain` `{label, text, level?}` | Ψ ② — change l'explication d'un champ pour `level`, ou pour tous les niveaux sans `level` |
 | `POST /psi/remove-field` `{label}` | Ψ — supprime un champ |
 | `GET /psi/trace` | Historique horodaté Ψ |
 

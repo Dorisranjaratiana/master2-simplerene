@@ -195,3 +195,35 @@ AXPLFormAppTest >> testSaisieRefuseeBloqueLEnregistrement [
     self assert: app pendingErrors isEmpty.
     self assert: app statusLabel label equals: app formTitle.
 ]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testCiblesDExplication [
+    "Ψ → Modifier → l'explication : un niveau précis, ou tous à la fois."
+    self
+        assert: app explanationTargets
+        equals: (AXPLFormBuilder levels collect: [ :each | each asString ]) asArray , #( 'Tous les niveaux' ).
+]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testModifierLExplicationDUnNiveauDepuisLaFenetre [
+    | desc simpleAvant expert |
+    desc := app psiEngine readDescription: 'Nom'.
+    simpleAvant := desc commentFor: #simple.
+    expert := AXPLFormBuilder levels indexOf: #expert.
+    self assert: (app currentExplanationOf: 'Nom' forTarget: expert) equals: (desc commentFor: #expert).
+    app applyExplanation: 'Nom de naissance.' to: 'Nom' forTarget: expert.
+    self assert: (desc commentFor: #expert) equals: 'Nom de naissance.'.
+    self assert: (desc commentFor: #simple) equals: simpleAvant.
+    self assert: (app psiEngine traceLog last value includesSubstring: 'Explication').
+]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testModifierLExplicationPourTousLesNiveauxDepuisLaFenetre [
+    | desc tous |
+    desc := app psiEngine readDescription: 'Nom'.
+    tous := app explanationTargets size.
+    self assert: (app currentExplanationOf: 'Nom' forTarget: tous) equals: (desc commentFor: desc level).
+    app applyExplanation: 'Nom de famille.' to: 'Nom' forTarget: tous.
+    AXPLFormBuilder levels do: [ :lvl |
+        self assert: (desc commentFor: lvl) equals: 'Nom de famille.' ].
+]

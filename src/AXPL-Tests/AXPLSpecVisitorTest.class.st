@@ -112,3 +112,20 @@ AXPLSpecVisitorTest >> testSaisieRefuseeSignaleeSurLeChamp [
     alors perdre sa largeur fixe — le champ se décalait."
     self assert: label label equals: 'Âge *'.
 ]
+
+{ #category : 'tests' }
+AXPLSpecVisitorTest >> testChampCreeParPsiAfficheSonExplication [
+    "② Le champ créé par Ψ montre son aide au survol, comme les autres,
+    et sa saisie va dans l'objet (dictionnaire #properties)."
+    | engine desc row |
+    engine := AXPLReflexivityEngine new metaContainer: container; yourself.
+    desc := engine
+        createField: 'Note interne'
+        type: SRStringDescription
+        level: #simple
+        explanation: 'Remarque libre du soignant.'.
+    row := (self visitorAt: #simple) visitStringDescription: desc.
+    self assert: row presenters first help equals: 'Remarque libre du soignant.'.
+    row presenters last text: 'RAS'.
+    self assert: (desc read: client) equals: 'RAS'.
+]
