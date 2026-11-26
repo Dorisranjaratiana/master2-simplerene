@@ -106,21 +106,24 @@ AXPLFormAppTest >> testLaFenetreOuverteSAdapteAuNiveau [
     "Régression : resizeWindowFor: appelait SpPresenter >> extent:, qui ne
     fait que mémoriser une valeur — la fenêtre ouverte gardait la même
     taille en Simple, Base et Expert. Ce test ouvre une vraie fenêtre et
-    mesure sa hauteur à chaque niveau."
-    | window heights |
+    vérifie, à chaque niveau, que sa hauteur réelle est celle attendue :
+    la hauteur calculée pour ses champs, plafonnée à l'écran. Il ne
+    suppose pas de taille d'écran (celui de la CI fait 240@120)."
+    | window framework |
+    framework := AXPLFramework for: client.
     window := app open.
-    [ heights := AXPLFormBuilder levels collect: [ :lvl |
+    [ AXPLFormBuilder levels do: [ :lvl |
+            | expected actual |
             app levelDropList selectItem: lvl.
             app updateInterface.
-            window adapter widget height ].
-      "<= entre Base et Expert : sur un petit écran, les deux peuvent
-      atteindre le plafond maxWindowHeight."
-      self
-          assert: heights first < heights second
-          description: 'hauteurs ' , heights printString , ' plafond ' , app maxWindowHeight printString
-              , ' écran ' , app currentWorld extent printString
-              , ' minExtent ' , window adapter widget minExtent printString.
-      self assert: heights second <= heights last.
-      self assert: heights last <= app maxWindowHeight ]
+            expected := (app
+                desiredHeightFor: (framework visibleFieldsAt: lvl) size
+                hiddenButtonShown: (framework hiddenFieldsAt: lvl) notEmpty)
+                    min: app maxWindowHeight.
+            actual := window adapter widget height.
+            self
+                assert: actual = expected
+                description: lvl asString , ' : hauteur ' , actual printString , ', attendu '
+                    , expected printString , ' (écran ' , app currentWorld extent printString , ')' ] ]
         ensure: [ window close ].
 ]
