@@ -32,9 +32,7 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'teapot',
-		'targetObject',
-		'metaContainer',
-		'psiEngine'
+		'framework'
 	],
 	#category : 'AXPL-Web',
 	#package : 'AXPL-Web'
@@ -50,16 +48,13 @@ AXPLWebServer class >> onPort: aPort forTargetObject: anObject [
 
 { #category : 'building' }
 AXPLWebServer >> formJsonFor: aLevelSymbol [
-	"① + ⑦ : mêmes AXPLFormBuilder et AXPLJsonVisitor que le desktop,
-	juste appelés directement plutôt que depuis un SRFormApp Spec2."
-	| builder visitor visible |
-	builder := AXPLFormBuilder new
-		targetObject: targetObject;
-		userLevel: aLevelSymbol;
-		metaContainer: metaContainer;
-		yourself.
-	visible := builder build.
-	visitor := AXPLJsonVisitor on: targetObject level: aLevelSymbol.
+	"① + ⑦ : même AXPLJsonVisitor que le desktop utilise AXPLSpecVisitor,
+	juste appelé directement plutôt que depuis un SRFormApp Spec2. Le
+	filtrage ① lui-même est délégué à la façade AXPLFramework, qui
+	dérive déjà le metaContainer et sait construire la liste filtrée."
+	| visible visitor |
+	visible := framework visibleFieldsAt: aLevelSymbol.
+	visitor := AXPLJsonVisitor on: framework targetObject level: aLevelSymbol.
 	^ visitor visit: visible
 ]
 
@@ -131,7 +126,7 @@ AXPLWebServer >> psiCreateField: aRequest [
 	type := body at: #type.
 	type = 'select'
 		ifTrue: [
-			psiEngine
+			framework psiEngine
 				createSelectionField: label
 				options: (body at: #options)
 				level: level ]
@@ -142,7 +137,7 @@ AXPLWebServer >> psiCreateField: aRequest [
 				at: 'boolean' put: SRBooleanDescription;
 				at: 'date' put: SRDateDescription;
 				yourself.
-			psiEngine
+			framework psiEngine
 				createField: label
 				type: (typeClasses at: type)
 				level: level ].
@@ -154,7 +149,7 @@ AXPLWebServer >> psiRemoveField: aRequest [
 	"⑥"
 	| body |
 	body := self jsonBodyOf: aRequest.
-	psiEngine removeField: (body at: #label).
+	framework psiEngine removeField: (body at: #label).
 	^ self ok
 ]
 
@@ -163,7 +158,7 @@ AXPLWebServer >> psiRename: aRequest [
 	"④"
 	| body |
 	body := self jsonBodyOf: aRequest.
-	psiEngine relabelDescription: (body at: #oldLabel) to: (body at: #newLabel).
+	framework psiEngine relabelDescription: (body at: #oldLabel) to: (body at: #newLabel).
 	^ self ok
 ]
 
@@ -172,7 +167,7 @@ AXPLWebServer >> psiSetLevel: aRequest [
 	"⑨"
 	| body |
 	body := self jsonBodyOf: aRequest.
-	psiEngine setLevel: (body at: #level) asSymbol ofDescription: (body at: #label).
+	framework psiEngine setLevel: (body at: #level) asSymbol ofDescription: (body at: #label).
 	^ self ok
 ]
 
@@ -213,17 +208,13 @@ AXPLWebServer >> stop [
 
 { #category : 'accessing' }
 AXPLWebServer >> targetObject: anObject [
-	targetObject := anObject.
-	metaContainer := anObject class descriptionForAXPL.
-	psiEngine := AXPLReflexivityEngine new
-		metaContainer: metaContainer;
-		yourself.
+	framework := AXPLFramework for: anObject
 ]
 
 { #category : 'accessing' }
 AXPLWebServer >> traceJson [
 	"[t]"
-	^ psiEngine traceLog collect: [ :assoc |
+	^ framework psiEngine traceLog collect: [ :assoc |
 		Dictionary new
 			at: #timestamp put: assoc key printString;
 			at: #action put: assoc value;
@@ -237,13 +228,13 @@ AXPLWebServer >> writeField: aRequest [
 	type Pharo attendu par la description (voir coerceValue:for:)."
 	| body desc value |
 	body := self jsonBodyOf: aRequest.
-	desc := metaContainer children
+	desc := framework metaContainer children
 		detect: [ :d | d label = (body at: #label) ]
 		ifNone: [ ^ Dictionary new at: #error put: 'Champ inconnu'; yourself ].
 	value := self coerceValue: (body at: #value) for: desc.
 	(desc isSatisfiedBy: value)
 		ifTrue: [
-			desc write: value to: targetObject.
+			desc write: value to: framework targetObject.
 			^ self ok ]
 		ifFalse: [ ^ Dictionary new at: #error put: 'Valeur invalide'; yourself ]
 ]

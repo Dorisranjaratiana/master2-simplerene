@@ -28,8 +28,8 @@ Class {
 		'contactUrgence',
 		'properties'
 	],
-	#category : 'AXPL-Core',
-	#package : 'AXPL-Core'
+	#category : 'AXPL-Examples',
+	#package : 'AXPL-Examples'
 }
 
 { #category : 'description' }

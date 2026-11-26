@@ -45,7 +45,7 @@ AXPLFormBuilder >> metaContainer: aContainer [
 
 { #category : 'accessing' }
 AXPLFormBuilder >> targetObject: anObject [
-	"L'objet à décrire (ex: une instance de ClientHopital)"
+	"L'objet métier à décrire (n'importe quelle classe implémentant descriptionForAXPL)"
 	targetObject := anObject
 ]
 

@@ -38,23 +38,37 @@ SRFormApp new
     open.
 ```
 
+## Façade (AXPLFramework)
+
+Un point d'entrée unique cache l'assemblage manuel de ① et Ψ (dériver le metaContainer, construire un `AXPLFormBuilder`, créer l'engine Ψ) — utile dès qu'on n'a pas besoin d'un `SRFormApp` complet (export JSON, script, tests...) :
+
+```st
+| framework visible |
+framework := AXPLFramework for: ClientHopital new.
+visible := framework visibleFieldsAt: #simple.    "① — filtrage par niveau"
+framework psiEngine createField: 'Note interne' type: SRStringDescription level: #expert.    "Ψ"
+```
+
+La façade s'arrête volontairement avant la construction du visiteur (`AXPLSpecVisitor` a besoin d'un presenter Spec2, `AXPLJsonVisitor` d'un niveau) : ces deux contrats sont légitimement différents selon la cible, c'est le principe même du ⑦ abstrait (`AXPLVisitor`).
+
 ## Architecture
 
 Le framework intègre nativement quatre dimensions autour d'une méta-description unique :
 
-- **A** — Adaptation contextuelle (AXPLFormBuilder)
+- **A** — Adaptation contextuelle (AXPLFormBuilder, exposé via AXPLFramework)
 - **X** — Explicabilité native (AXPLSpecVisitor)
-- **Ψ** — Réflexivité actionnable (AXPLReflexivityEngine)
+- **Ψ** — Réflexivité actionnable (AXPLReflexivityEngine, exposé via AXPLFramework)
 - **L** — Accessibilité Low-Code (SRFormApp)
 
 ## Packages
 
 - `AXPL-Descriptions` — Extension du vrai [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (niveau #simple/#base/#expert, explicabilité graduée)
-- `AXPL-Core` — Moteurs A et Ψ
+- `AXPL-Core` — Moteurs A et Ψ, et la façade `AXPLFramework`
+- `AXPL-Examples` — objets métier de démonstration (`ClientHopital`, `Etudiant`) — **ne fait pas partie du framework** : il ne requiert qu'`AXPL-Descriptions`, jamais l'inverse
 - `AXPL-UI` — Interface L (desktop, Spec2)
 - `AXPL-Json` — Export JSON pur (aucune dépendance Spec2), pour un frontend web séparé
 - `AXPL-Web` *(groupe `web` uniquement)* — API HTTP ([Teapot](https://github.com/zeroflag/Teapot) + [NeoJSON](https://github.com/svenvc/NeoJSON)) exposant AXPL-Json et Ψ à un frontend externe (React, etc.)
-- `AXPL-Tests` — suite de tests unitaires (①, Ψ, ⑦, généricité, extensions SimpleRene) — groupe `core`
+- `AXPL-Tests` — suite de tests unitaires (①, Ψ, ⑦, généricité, extensions SimpleRene, façade) — groupe `core`
 - `AXPL-Web-Tests` *(groupe `web` uniquement)* — tests du serveur HTTP, seul package avec `AXPL-Web` à dépendre de Teapot/NeoJSON
 
 Un chargement par défaut (`load.`) tire le groupe `default` = `core` = tout sauf `AXPL-Web`/`AXPL-Web-Tests`. C'est volontaire : le framework reste utilisable et testable 100% côté Pharo sans jamais toucher à une dépendance web, celle-ci n'étant chargée qu'à la demande (`load: #('web')`).
