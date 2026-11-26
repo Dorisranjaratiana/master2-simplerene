@@ -67,16 +67,21 @@ AXPLFormApp >> defaultLayout [
 ]
 
 { #category : 'layout' }
-AXPLFormApp >> formBodyLayout [
+AXPLFormApp >> formBodyLayoutScrollable: needsScroll [
     "Zone sous la liste des niveaux quand un niveau est choisi : le
-    formulaire (défilant s'il dépasse l'écran) puis la barre d'actions.
-    Elle est remplacée d'un bloc (bodyContainer layout:) plutôt que de
-    masquer/afficher la barre : une barre construite masquée gardait une
-    hauteur nulle une fois réaffichée — les boutons n'étaient plus
-    qu'une fine ligne."
+    formulaire puis la barre d'actions. Elle est remplacée d'un bloc
+    (bodyContainer layout:) plutôt que de masquer/afficher la barre : une
+    barre construite masquée gardait une hauteur nulle une fois
+    réaffichée — les boutons n'étaient plus qu'une fine ligne.
+    Le formulaire n'est défilant que s'il ne tient pas à l'écran : la
+    zone défilante de Morphic affichait sinon une barre verticale dès que
+    son contenu dépassait de quelques pixels, même quand tout tenait."
     ^ SpBoxLayout newTopToBottom
         spacing: 10;
-        add: (SpScrollableLayout with: formContainer) expand: true;
+        add: (needsScroll
+            ifTrue: [ SpScrollableLayout with: formContainer ]
+            ifFalse: [ formContainer ])
+            expand: true;
         add: actionBar expand: false;
         yourself
 ]
@@ -542,5 +547,7 @@ AXPLFormApp >> updateInterface [
     self resizeWindowFor: visibleDescs size hiddenButtonShown: hidden notEmpty.
     formContainer := self newPresenter.
     formContainer layout: newLayout.
-    bodyContainer layout: self formBodyLayout.
+    bodyContainer layout: (self formBodyLayoutScrollable:
+        (self desiredHeightFor: visibleDescs size hiddenButtonShown: hidden notEmpty)
+            > self maxWindowHeight).
 ]

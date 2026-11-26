@@ -171,3 +171,12 @@ AXPLFormAppTest >> testRevenirDExpertASimpleRepartDUnFormulaireNeuf [
         assert: app formContainer layout presenters size
         equals: ((AXPLFramework for: client) visibleFieldsAt: #simple) size + 1.
 ]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testZoneDefilanteSeulementSiLeFormulaireDepasseLEcran [
+    "Sans défilement nécessaire, le formulaire est posé directement : la
+    zone défilante de Morphic affichait sinon une barre verticale même
+    quand tout tenait."
+    self assert: ((app formBodyLayoutScrollable: false) presenters includes: app formContainer).
+    self deny: ((app formBodyLayoutScrollable: true) presenters includes: app formContainer).
+]
