@@ -147,3 +147,12 @@ AXPLFormBuilderTest >> testPsiValideContreLesNiveauxConfigures [
     self assert: (engine readDescription: 'Nom') level equals: #visiteur.
     self should: [ engine setLevel: #inconnu ofDescription: 'Nom' ] raise: Error.
 ]
+
+{ #category : 'tests' }
+AXPLFormBuilderTest >> testNiveauRequisPourVoirUnChamp [
+    | desc |
+    desc := container children detect: [ :d | d label = 'Allergies' ].
+    self assert: (AXPLFormBuilder requiredLevelFor: desc) equals: #expert.
+    desc level: #exprt.
+    self assert: (AXPLFormBuilder requiredLevelFor: desc) equals: #expert.
+]

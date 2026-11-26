@@ -214,7 +214,7 @@ AXPLFormApp >> runPsiCreateField [
                 request: 'Ψ — Options séparées par des virgules :'
                 initialAnswer: ''.
             (optionsText isNil or: [ optionsText isEmpty ]) ifTrue: [ ^ self ].
-            options := ((optionsText substrings: ',') collect: [ :each | each trimBoth ]) asArray.
+            options := self parseOptions: optionsText.
             self psiEngine createSelectionField: label options: options level: niveau ]
         ifFalse: [
             typeClasses := { SRStringDescription. SRNumberDescription. SRBooleanDescription. SRDateDescription }.
@@ -319,8 +319,7 @@ AXPLFormApp >> save [
     targetObject au fil de la saisie (cf. AXPLSpecVisitor), cette étape ne
     fait que vérifier qu'elles sont toutes valides."
     | invalides |
-    invalides := self metaContainer children
-        reject: [ :d | d isSatisfiedBy: (d read: targetObject) ].
+    invalides := self invalidFields.
     invalides isEmpty
         ifTrue: [ self inform: 'Enregistré : toutes les valeurs sont valides.' ]
         ifFalse: [
@@ -334,12 +333,39 @@ AXPLFormApp >> save [
 AXPLFormApp >> showHiddenFieldsExplanation: aCollectionOfDescriptions [
     "② Explique en un seul écran pourquoi chaque champ masqué ne s'affiche
     pas au niveau courant, au lieu d'un bouton par champ."
-    | text |
-    text := aCollectionOfDescriptions inject: '' into: [ :acc :d |
-        | expl |
-        expl := d commentFor: levelDropList selectedItem.
-        acc , d label , ' : ' , (expl ifNil: [ 'Accès restreint.' ]) , String cr ].
-    self inform: text.
+    self inform: (self hiddenFieldsExplanationText: aCollectionOfDescriptions)
+]
+
+{ #category : 'updating' }
+AXPLFormApp >> hiddenFieldsExplanationText: aCollectionOfDescriptions [
+    "Pour chaque champ masqué : le niveau qui le débloque (la vraie raison
+    du masquage), puis ce qu'il signifie à ce niveau-là. Avant, seule la
+    signification au niveau courant était donnée — elle ne disait pas
+    pourquoi le champ était caché ni comment le voir."
+    ^ aCollectionOfDescriptions
+        inject: 'Champs masqués au niveau ' , levelDropList selectedItem asString capitalized , ' :' , String cr
+        into: [ :acc :d |
+            | required expl |
+            required := AXPLFormBuilder requiredLevelFor: d.
+            expl := d commentFor: required.
+            acc , '- ' , d label , ' — visible à partir du niveau ' , required asString capitalized
+                , (expl isEmpty ifTrue: [ '' ] ifFalse: [ ' : ' , expl ])
+                , String cr ]
+]
+
+{ #category : 'updating' }
+AXPLFormApp >> invalidFields [
+    "Les champs dont la valeur actuelle ne respecte pas les règles de
+    SimpleRene (beRequired, bePositive, conditions personnalisées)."
+    ^ self metaContainer children
+        reject: [ :d | d isSatisfiedBy: (d read: targetObject) ]
+]
+
+{ #category : 'psi' }
+AXPLFormApp >> parseOptions: aString [
+    "'A, B ,AB' → #('A' 'B' 'AB') : options d'un champ Choix créé par Ψ."
+    ^ (((aString substrings: ',') collect: [ :each | each trimBoth ])
+        reject: [ :each | each isEmpty ]) asArray
 ]
 
 { #category : 'accessing' }

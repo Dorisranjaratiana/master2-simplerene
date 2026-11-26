@@ -178,7 +178,7 @@ Routes disponibles (CORS ouvert, pratique pour un frontend en développement loc
 
 | Route | Description |
 |---|---|
-| `GET /form?level=simple\|base\|expert` | Champs visibles à ce niveau, en JSON |
+| `GET /form?level=simple\|base\|expert` | Champs visibles à ce niveau (`fields`), et champs masqués avec le niveau qui les débloque (`hidden: [{label, requiredLevel}]`) |
 | `POST /field` `{label, value}` | Écrit une valeur (validée avant écriture, comme le desktop) |
 | `POST /psi/rename` `{oldLabel, newLabel}` | Ψ — renomme un champ |
 | `POST /psi/set-level` `{label, level}` | Ψ — change le niveau d'un champ |

@@ -52,10 +52,16 @@ AXPLWebServer >> formJsonFor: aLevelSymbol [
 	juste appelé directement plutôt que depuis un AXPLFormApp Spec2. Le
 	filtrage ① lui-même est délégué à la façade AXPLFramework, qui
 	dérive déjà le metaContainer et sait construire la liste filtrée."
-	| visible visitor |
+	| visible visitor json |
 	visible := framework visibleFieldsAt: aLevelSymbol.
 	visitor := AXPLJsonVisitor on: framework targetObject level: aLevelSymbol.
-	^ visitor visit: visible
+	json := visitor visit: visible.
+	json at: #hidden put: ((framework hiddenFieldsAt: aLevelSymbol) collect: [ :d |
+		Dictionary new
+			at: #label put: d label;
+			at: #requiredLevel put: (AXPLFormBuilder requiredLevelFor: d) asString;
+			yourself ]) asArray.
+	^ json
 ]
 
 { #category : 'private' }

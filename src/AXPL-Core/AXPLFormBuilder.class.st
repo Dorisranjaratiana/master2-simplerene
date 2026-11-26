@@ -53,6 +53,16 @@ AXPLFormBuilder class >> mostPrivilegedLevel [
 	^ self levels last
 ]
 
+{ #category : 'querying' }
+AXPLFormBuilder class >> requiredLevelFor: aDescription [
+	"② Le niveau minimal qui débloque ce champ — c'est la réponse à
+	'pourquoi ce champ est-il masqué ?'. Un niveau non reconnu n'est vu
+	que par le niveau le plus privilégié (cf. canUserSee:)."
+	^ (self levels includes: aDescription level)
+		ifTrue: [ aDescription level ]
+		ifFalse: [ self mostPrivilegedLevel ]
+]
+
 { #category : 'accessing' }
 AXPLFormBuilder class >> resetLevels [
 	levels := nil

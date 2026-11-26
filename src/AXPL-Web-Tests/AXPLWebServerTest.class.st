@@ -194,3 +194,14 @@ AXPLWebServerTest >> testPsiSetLevelRouteNiveauInvalideRenvoieErreur [
         detect: [ :f | (f at: #label) = 'Allergies' ].
     self assert: (allergies at: #level) equals: 'expert'.
 ]
+
+{ #category : 'tests' }
+AXPLWebServerTest >> testFormJsonDonneLesChampsMasquesEtLeurNiveauRequis [
+    "Le frontend web peut répondre à 'pourquoi ce champ est masqué ?'."
+    | server json allergies |
+    server := AXPLWebServer new targetObject: client; yourself.
+    json := server formJsonFor: #simple.
+    allergies := (json at: #hidden) detect: [ :h | (h at: #label) = 'Allergies' ].
+    self assert: (allergies at: #requiredLevel) equals: 'expert'.
+    self assert: ((server formJsonFor: #expert) at: #hidden) isEmpty.
+]
