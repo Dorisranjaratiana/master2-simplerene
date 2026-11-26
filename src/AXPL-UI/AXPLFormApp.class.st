@@ -186,7 +186,6 @@ AXPLFormApp >> showNeutralState [
     formContainer layout: SpBoxLayout newVertical.
     statusLabel label: self class neutralMessage.
     actionBar visible: false.
-    self update.
     self window ifNotNil: [ :w | w resize: 500 @ self class neutralHeight ].
 ]
 
@@ -506,10 +505,13 @@ AXPLFormApp >> updateInterface [
             action: [ self showHiddenFieldsExplanation: hidden ])
             expand: false ].
 
+    "layout et visible sont des ObservableSlot dans Spec2 : changer le
+    layout de formContainer le reconstruit à lui seul (replaceLayoutWith:).
+    On n'appelle plus self update : cette reconstruction de toute la
+    fenêtre, marquée obsolète par Spec2, recréait aussi la liste des
+    niveaux — qui, démarrant sans sélection, effaçait alors le niveau
+    qu'on venait de choisir (SpMorphicDropListAdapter>>verifyInitialStatus)."
     formContainer layout: newLayout.
     actionBar visible: true.
-    self update.
-    "Après la reconstruction, pas avant : c'est la fenêtre reconstruite
-    qu'on redimensionne."
     self resizeWindowFor: visibleDescs size hiddenButtonShown: hidden notEmpty.
 ]
