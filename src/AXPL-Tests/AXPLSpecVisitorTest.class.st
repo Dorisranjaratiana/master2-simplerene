@@ -94,8 +94,8 @@ AXPLSpecVisitorTest >> testUnElementParChampVisible [
 
 { #category : 'tests' }
 AXPLSpecVisitorTest >> testSaisieRefuseeSignaleeSurLeChamp [
-    "-5 dans l'Âge : refusé, signalé (⚠ + message en infobulle), l'objet
-    garde sa valeur ; une saisie corrigée efface le signalement."
+    "-5 dans l'Âge : refusé, signalé par l'infobulle du champ, l'objet
+    garde sa valeur ; une saisie corrigée rétablit l'explication."
     | desc row label input |
     desc := self descriptionLabelled: 'Âge'.
     client age: 30.
@@ -104,9 +104,11 @@ AXPLSpecVisitorTest >> testSaisieRefuseeSignaleeSurLeChamp [
     input := row presenters last.
     input number: -5.
     self assert: client age equals: 30.
-    self assert: label label equals: '⚠ Âge *'.
-    self assert: label help equals: (desc validationMessageFor: -5) asString.
+    self assert: label help equals: '⚠ ' , (desc validationMessageFor: -5) asString.
     input number: 33.
     self assert: client age equals: 33.
+    self assert: label help equals: (desc commentFor: #simple).
+    "Régression : le texte du label changeait, et Morphic lui faisait
+    alors perdre sa largeur fixe — le champ se décalait."
     self assert: label label equals: 'Âge *'.
 ]

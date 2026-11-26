@@ -174,16 +174,15 @@ AXPLSpecVisitor >> withLabel: aLabel for: aWidget [
 
 { #category : 'private' }
 AXPLSpecVisitor >> mark: aLabelledPresenter for: aDescription with: messageOrNil [
-    "Signale une saisie refusée sur le champ lui-même : ⚠ devant le label,
-    et le message de SimpleRene en infobulle à la place de l'explication
-    ②. Une saisie valide rétablit label et explication."
+    "Signale une saisie refusée sur le champ lui-même par son infobulle :
+    le message de SimpleRene remplace l'explication ② tant que la saisie
+    est refusée. Le TEXTE du label ne change jamais : un LabelMorph dont
+    on change le contenu après affichage se redimensionne à son texte
+    (fitContents) et perd sa largeur fixe de 140 — le champ glissait sous
+    la colonne des labels. Constaté sur une vraie image."
     | explanation |
     explanation := aDescription commentFor: level.
-    messageOrNil
-        ifNil: [
-            aLabelledPresenter label: (self labelTextFor: aDescription).
-            aLabelledPresenter help: (explanation isString ifTrue: [ explanation ] ifFalse: [ '' ]) ]
-        ifNotNil: [
-            aLabelledPresenter label: '⚠ ' , (self labelTextFor: aDescription).
-            aLabelledPresenter help: messageOrNil asString ]
+    aLabelledPresenter help: (messageOrNil
+        ifNil: [ explanation isString ifTrue: [ explanation ] ifFalse: [ '' ] ]
+        ifNotNil: [ '⚠ ' , messageOrNil asString ])
 ]

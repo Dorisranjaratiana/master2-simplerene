@@ -579,8 +579,10 @@ AXPLFormApp >> pendingErrors [
 
 { #category : 'updating' }
 AXPLFormApp >> validationOf: aDescription changedTo: messageOrNil [
-    "Appelé par le visiteur à chaque saisie : le message de SimpleRene
-    s'affiche en haut de la fenêtre (le champ porte déjà ⚠) ; une saisie
+    "Appelé par le visiteur à chaque saisie. En haut de la fenêtre, un
+    message COURT : le message complet de SimpleRene, parfois long,
+    élargissait tout le formulaire au-delà de la fenêtre. Il reste dans
+    l'infobulle du champ et dans le refus d'Enregistrer. Une saisie
     corrigée retire l'erreur."
     messageOrNil
         ifNil: [ self pendingErrors removeKey: aDescription label ifAbsent: [ ] ]
@@ -590,5 +592,5 @@ AXPLFormApp >> validationOf: aDescription changedTo: messageOrNil [
             self pendingErrors
                 ifEmpty: [ self formTitle ]
                 ifNotEmpty: [ :errors | '⚠ ' , errors size printString , ' saisie(s) refusée(s)' ] ]
-        ifNotNil: [ '⚠ ' , aDescription label , ' : ' , messageOrNil asString ])
+        ifNotNil: [ '⚠ ' , aDescription label , ' : saisie refusée — survolez le champ' ])
 ]
