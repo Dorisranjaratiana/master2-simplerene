@@ -526,12 +526,16 @@ AXPLFormApp >> updateInterface [
             action: [ self showHiddenFieldsExplanation: hidden ])
             expand: false ].
 
-    "layout et visible sont des ObservableSlot dans Spec2 : changer le
-    layout de formContainer le reconstruit à lui seul (replaceLayoutWith:).
-    On n'appelle plus self update : cette reconstruction de toute la
-    fenêtre, marquée obsolète par Spec2, recréait aussi la liste des
-    niveaux — qui, démarrant sans sélection, effaçait alors le niveau
-    qu'on venait de choisir (SpMorphicDropListAdapter>>verifyInitialStatus)."
+    "On remplace la zone sous la liste des niveaux (bodyContainer layout:,
+    un ObservableSlot que Spec2 reconstruit seul) au lieu d'appeler
+    self update : cette reconstruction de toute la fenêtre, marquée
+    obsolète par Spec2, recréait aussi la liste des niveaux — qui,
+    démarrant sans sélection, effaçait alors le niveau qu'on venait de
+    choisir (SpMorphicDropListAdapter>>verifyInitialStatus).
+    formContainer est un presenter NEUF à chaque rendu : réutilisé, son
+    widget Morphic gardait la taille du formulaire précédent — revenir
+    d'Expert à Simple affichait des barres de défilement inutiles."
+    formContainer := self newPresenter.
     formContainer layout: newLayout.
     bodyContainer layout: self formBodyLayout.
     self resizeWindowFor: visibleDescs size hiddenButtonShown: hidden notEmpty.
