@@ -4,12 +4,12 @@ Framework Low-Code pour le pilotage natif des interfaces adaptatives.
 
 ## Chargement en une ligne (Pharo 13)
 
-Un chargement simple reste **100% côté Pharo** : SimpleRene, les moteurs ①Ψ, l'UI desktop (Spec2) et l'export JSON, sans toucher à Teapot/NeoJSON ni au serveur HTTP.
+Version stable **v1.0.0** — figée, reproductible (le même code à chaque chargement). Un chargement simple reste **100% côté Pharo** : SimpleRene, les moteurs ①Ψ, l'UI desktop (Spec2) et l'export JSON, sans toucher à Teapot/NeoJSON ni au serveur HTTP.
 
 ```st
 Metacello new
     baseline: 'AXPL';
-    repository: 'github://Dorisranjaratiana/master2-simplerene:integration-simplerene/src';
+    repository: 'github://Dorisranjaratiana/master2-simplerene:v1.0.0/src';
     load.
 ```
 
@@ -18,9 +18,23 @@ Pour charger en plus la partie web (serveur HTTP `AXPL-Web`, Teapot, NeoJSON) :
 ```st
 Metacello new
     baseline: 'AXPL';
-    repository: 'github://Dorisranjaratiana/master2-simplerene:integration-simplerene/src';
+    repository: 'github://Dorisranjaratiana/master2-simplerene:v1.0.0/src';
     load: #('web').
 ```
+
+Version de développement (dernières modifications, peut changer à tout moment) : remplacer `v1.0.0` par `integration-simplerene`.
+
+## Versions
+
+**v1.0.0** — première version stable :
+- dépendance réelle à SimpleRene (extensions, jamais de réimplémentation), Teapot et NeoJSON — toutes épinglées sur un commit
+- façade `AXPLFramework`, protocole d'extension `descriptionForAXPL` documenté
+- niveaux configurables (`AXPLFormBuilder levels:`), contrat de visiteur commun (`on:level:`)
+- Ψ : création, suppression, renommage (explications ② conservées, doublons refusés), changement de niveau validé, traçabilité horodatée
+- explication des champs masqués par le niveau qui les débloque (desktop et web)
+- types SimpleRene non gérés refusés explicitement ; mots de passe masqués et jamais renvoyés au web
+- groupes de chargement `core` (100% Pharo) et `web`
+- 75 tests (cœur, Ψ, visiteurs, interface desktop, serveur web), exécutés par la CI à chaque push
 
 ## Utilisation
 
