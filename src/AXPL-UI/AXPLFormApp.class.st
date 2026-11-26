@@ -204,10 +204,10 @@ AXPLFormApp >> resetInterface [
 
 { #category : 'updating' }
 AXPLFormApp >> showNeutralState [
+    self window ifNotNil: [ :w | w resize: 500 @ self class neutralHeight ].
     formContainer layout: SpBoxLayout newVertical.
     bodyContainer layout: SpBoxLayout newVertical.
     statusLabel label: self class neutralMessage.
-    self window ifNotNil: [ :w | w resize: 500 @ self class neutralHeight ].
 ]
 
 { #category : 'psi' }
@@ -532,11 +532,15 @@ AXPLFormApp >> updateInterface [
     obsolète par Spec2, recréait aussi la liste des niveaux — qui,
     démarrant sans sélection, effaçait alors le niveau qu'on venait de
     choisir (SpMorphicDropListAdapter>>verifyInitialStatus).
-    formContainer est un presenter NEUF à chaque rendu : réutilisé, son
-    widget Morphic gardait la taille du formulaire précédent — revenir
-    d'Expert à Simple affichait des barres de défilement inutiles."
+    La fenêtre prend sa taille finale AVANT la construction du nouveau
+    formulaire : la zone défilante (GeneralScrollPaneMorph) étire son
+    contenu (spaceFill) à la taille qu'elle a au moment de la
+    construction. Construit dans la fenêtre encore haute d'Expert, le
+    formulaire Simple gardait cette hauteur une fois la fenêtre réduite
+    — d'où des barres de défilement en revenant à Simple, jamais en
+    partant de l'écran neutre (la fenêtre y grandit au lieu de rétrécir)."
+    self resizeWindowFor: visibleDescs size hiddenButtonShown: hidden notEmpty.
     formContainer := self newPresenter.
     formContainer layout: newLayout.
     bodyContainer layout: self formBodyLayout.
-    self resizeWindowFor: visibleDescs size hiddenButtonShown: hidden notEmpty.
 ]
