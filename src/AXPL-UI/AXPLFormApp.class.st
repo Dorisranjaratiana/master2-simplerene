@@ -16,6 +16,7 @@ Class {
 	#instVars : [
 		'levelDropList',
 		'formContainer',
+		'bodyContainer',
 		'statusLabel',
 		'targetObject',
 		'actionBar',
@@ -61,9 +62,28 @@ AXPLFormApp >> defaultLayout [
             add: (self newLabel label: 'Niveau:') expand: false;
             add: levelDropList expand: true;
             yourself) expand: false;
+        add: bodyContainer expand: true;
+        yourself
+]
+
+{ #category : 'layout' }
+AXPLFormApp >> formBodyLayout [
+    "Zone sous la liste des niveaux quand un niveau est choisi : le
+    formulaire (défilant s'il dépasse l'écran) puis la barre d'actions.
+    Elle est remplacée d'un bloc (bodyContainer layout:) plutôt que de
+    masquer/afficher la barre : une barre construite masquée gardait une
+    hauteur nulle une fois réaffichée — les boutons n'étaient plus
+    qu'une fine ligne."
+    ^ SpBoxLayout newTopToBottom
+        spacing: 10;
         add: (SpScrollableLayout with: formContainer) expand: true;
         add: actionBar expand: false;
         yourself
+]
+
+{ #category : 'accessing' }
+AXPLFormApp >> bodyContainer [
+    ^ bodyContainer
 ]
 
 { #category : 'accessing' }
@@ -98,6 +118,8 @@ AXPLFormApp >> initializePresenters [
         whenSelectedItemChangedDo: [ :item | self updateInterface ].
     formContainer := self newPresenter.
     formContainer layout: SpBoxLayout newVertical.
+    bodyContainer := self newPresenter.
+    bodyContainer layout: SpBoxLayout newVertical.
     psiButton := self newButton label: ''; yourself.
     traceButton := self newButton
         label: 'Trace Ψ';
@@ -120,7 +142,6 @@ AXPLFormApp >> initializePresenters [
             action: [ self save ];
             yourself) expand: true;
         yourself).
- actionBar visible: false.
 ]
 
 { #category : 'initialization' }
@@ -184,8 +205,8 @@ AXPLFormApp >> resetInterface [
 { #category : 'updating' }
 AXPLFormApp >> showNeutralState [
     formContainer layout: SpBoxLayout newVertical.
+    bodyContainer layout: SpBoxLayout newVertical.
     statusLabel label: self class neutralMessage.
-    actionBar visible: false.
     self window ifNotNil: [ :w | w resize: 500 @ self class neutralHeight ].
 ]
 
@@ -512,6 +533,6 @@ AXPLFormApp >> updateInterface [
     niveaux — qui, démarrant sans sélection, effaçait alors le niveau
     qu'on venait de choisir (SpMorphicDropListAdapter>>verifyInitialStatus)."
     formContainer layout: newLayout.
-    actionBar visible: true.
+    bodyContainer layout: self formBodyLayout.
     self resizeWindowFor: visibleDescs size hiddenButtonShown: hidden notEmpty.
 ]

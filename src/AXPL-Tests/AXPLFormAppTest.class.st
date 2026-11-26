@@ -133,7 +133,7 @@ AXPLFormAppTest >> testEtatInitialNeutre [
     "À l'ouverture : aucun niveau choisi, aucun formulaire, aucun bouton."
     self assert: app levelDropList selectedItem isNil.
     self assert: app formContainer layout presenters isEmpty.
-    self deny: app actionBar isVisible.
+    self deny: (app bodyContainer layout presenters includes: app actionBar).
 ]
 
 { #category : 'tests' }
@@ -143,7 +143,7 @@ AXPLFormAppTest >> testChoisirUnNiveauAfficheDirectementLeFormulaire [
     self
         assert: app formContainer layout presenters size
         equals: ((AXPLFramework for: client) visibleFieldsAt: #base) size + 1.
-    self assert: app actionBar isVisible.
+    self assert: (app bodyContainer layout presenters includes: app actionBar).
 ]
 
 { #category : 'tests' }
@@ -154,5 +154,5 @@ AXPLFormAppTest >> testAnnulerDepuisExpertRevientALEcranNeutre [
     app resetInterface.
     self assert: app levelDropList selectedItem isNil.
     self assert: app formContainer layout presenters isEmpty.
-    self deny: app actionBar isVisible.
+    self deny: (app bodyContainer layout presenters includes: app actionBar).
 ]
