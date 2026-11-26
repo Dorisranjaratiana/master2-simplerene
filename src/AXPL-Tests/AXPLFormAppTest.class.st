@@ -89,8 +89,16 @@ AXPLFormAppTest >> testExplicationDesChampsMasquesDonneLeNiveauRequis [
 AXPLFormAppTest >> testHauteurSouhaiteeSuitLeNombreDeChamps [
     self assert: (app desiredHeightFor: 5 hiddenButtonShown: true)
         < (app desiredHeightFor: 11 hiddenButtonShown: true).
-    self assert: (app desiredHeightFor: 0 hiddenButtonShown: false) equals: 400.
-    self assert: (app desiredHeightFor: 100 hiddenButtonShown: false) equals: 950.
+    self assert: (app desiredHeightFor: 5 hiddenButtonShown: true) equals: 388.
+    self assert: (app desiredHeightFor: 0 hiddenButtonShown: false) equals: 300.
+]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testFenetreJamaisPlusHauteQueLEcran [
+    "Régression : en Expert, la barre Annuler / Ψ / Trace / Enregistrer
+    passait sous le bord de l'écran."
+    app currentWorld ifNotNil: [ :world |
+        self assert: app maxWindowHeight < world height ].
 ]
 
 { #category : 'tests' }
@@ -105,7 +113,10 @@ AXPLFormAppTest >> testLaFenetreOuverteSAdapteAuNiveau [
             app levelDropList selectItem: lvl.
             app updateInterface.
             window adapter widget height ].
+      "<= entre Base et Expert : sur un petit écran, les deux peuvent
+      atteindre le plafond maxWindowHeight."
       self assert: heights first < heights second.
-      self assert: heights second < heights last ]
+      self assert: heights second <= heights last.
+      self assert: heights last <= app maxWindowHeight ]
         ensure: [ window close ].
 ]

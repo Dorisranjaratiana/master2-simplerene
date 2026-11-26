@@ -52,7 +52,7 @@ AXPLFormApp >> defaultLayout [
             add: levelDropList expand: true;
             yourself) expand: false;
         add: generateButton expand: false;
-        add: formContainer expand: true;
+        add: (SpScrollableLayout with: formContainer) expand: true;
         add: actionBar expand: false;
         yourself
 ]
@@ -417,14 +417,29 @@ AXPLFormApp >> resizeWindowFor: visibleFieldCount hiddenButtonShown: hasHiddenBu
     SpWindowPresenter >> resize: passe par l'adaptateur Morphic et
     redimensionne réellement la fenêtre (ou attend qu'elle s'ouvre)."
     self window ifNotNil: [ :w |
-        w resize: 500 @ (self desiredHeightFor: visibleFieldCount hiddenButtonShown: hasHiddenButton) ].
+        w resize: 500 @ ((self desiredHeightFor: visibleFieldCount hiddenButtonShown: hasHiddenButton)
+            min: self maxWindowHeight) ].
 ]
 
 { #category : 'layout' }
 AXPLFormApp >> desiredHeightFor: visibleFieldCount hiddenButtonShown: hasHiddenButton [
+    "33 = hauteur d'une ligne de champ (≈25) + espacement du visiteur (8) ;
+    190 = barre de titre, statut, niveau, Rafraîchir, barre d'actions,
+    espacements et bordures — mesurés sur une vraie fenêtre. L'ancienne
+    estimation (41 et 270) laissait un grand vide sous les champs."
     | rowCount |
     rowCount := visibleFieldCount + (hasHiddenButton ifTrue: [ 1 ] ifFalse: [ 0 ]).
-    ^ ((rowCount * 41) + 270) min: 950 max: 400
+    ^ (rowCount * 33) + 190 max: 300
+]
+
+{ #category : 'layout' }
+AXPLFormApp >> maxWindowHeight [
+    "Jamais plus haut que l'écran Pharo : sinon la barre Annuler / Ψ /
+    Trace / Enregistrer passe sous le bord de l'écran. Au-delà, la zone
+    du formulaire défile (cf. defaultLayout)."
+    ^ self currentWorld
+        ifNil: [ 950 ]
+        ifNotNil: [ :world | world height - 40 ]
 ]
 
 { #category : 'accessing' }
