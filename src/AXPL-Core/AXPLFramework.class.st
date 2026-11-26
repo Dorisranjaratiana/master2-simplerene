@@ -1,17 +1,17 @@
 "
 ""Façade d'entrée du framework AXPL. Cache l'assemblage manuel de ① et Ψ
 qu'un utilisateur du framework devait jusqu'ici refaire à la main à
-chaque point d'intégration (SRFormApp, AXPLWebServer, les tests...) :
+chaque point d'intégration (AXPLFormApp, AXPLWebServer, les tests...) :
 dériver le metaContainer depuis targetObject class descriptionForAXPL,
 construire un AXPLFormBuilder pour filtrer par niveau, et créer UNE
 instance d'AXPLReflexivityEngine par cible — jamais recréée entre les
 re-rendus, comme le veut le commentaire de classe d'AXPLReflexivityEngine
 lui-même (jusqu'ici un vœu pieux : rien ne l'imposait vraiment).
 
-Ne construit PAS le visiteur à la place de l'appelant : AXPLSpecVisitor
-(a besoin d'un presenter Spec2) et AXPLJsonVisitor (a besoin d'un niveau)
-ont des contrats de construction légitimement différents selon la cible
-— c'est précisément le principe du ⑦ abstrait. La façade s'arrête donc
+Ne construit PAS le visiteur à la place de l'appelant : tous les
+visiteurs se créent par AXPLVisitor class >> on:level:, mais chaque cible
+peut demander en plus ce qui lui est propre (AXPLSpecVisitor : un
+presenter Spec2 pour ses fabriques de widgets). La façade s'arrête donc
 à visibleFieldsAt:, qui renvoie une Collection de descriptions prête à
 être passée à visit: sur n'importe quel AXPLVisitor concret.""
 "

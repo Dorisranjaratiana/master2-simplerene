@@ -78,3 +78,72 @@ AXPLFormBuilderTest >> testNiveauInvalideLeveUneErreur [
     requête HTTP externe non fiable."
     self should: [ builder userLevel: #inconnu ] raise: Error.
 ]
+
+{ #category : 'running' }
+AXPLFormBuilderTest >> tearDown [
+    AXPLFormBuilder resetLevels.
+    super tearDown.
+]
+
+{ #category : 'private' }
+AXPLFormBuilderTest >> containerAvecNiveaux: aCollectionOfLevels [
+    | c |
+    c := SRPriorityContainer new.
+    aCollectionOfLevels doWithIndex: [ :lvl :i |
+        c add: (SRStringDescription new
+            label: 'Champ ' , lvl;
+            accessor: #nom;
+            priority: i * 10;
+            level: lvl;
+            yourself) ].
+    ^ c
+]
+
+{ #category : 'tests' }
+AXPLFormBuilderTest >> testNiveauxParDefaut [
+    self assert: AXPLFormBuilder levels equals: #( #simple #base #expert ).
+    self assert: AXPLFormBuilder mostPrivilegedLevel equals: #expert.
+]
+
+{ #category : 'tests' }
+AXPLFormBuilderTest >> testNiveauxConfigurablesSansModifierLeFramework [
+    "Un 4e niveau s'ajoute par configuration ; le filtrage suit le rang."
+    AXPLFormBuilder levels: #( #visiteur #simple #base #expert ).
+    builder metaContainer: (self containerAvecNiveaux: #( #visiteur #simple #expert )).
+    builder userLevel: #visiteur.
+    self assert: builder build size equals: 1.
+    builder userLevel: #simple.
+    self assert: builder build size equals: 2.
+    builder userLevel: #base.
+    self assert: builder build size equals: 2.
+    builder userLevel: #expert.
+    self assert: builder build size equals: 3.
+]
+
+{ #category : 'tests' }
+AXPLFormBuilderTest >> testChampDeNiveauInconnuVuSeulementParLePlusPrivilegie [
+    "Une faute de frappe dans descriptionForAXPL ne doit jamais exposer
+    un champ aux niveaux inférieurs."
+    builder metaContainer: (self containerAvecNiveaux: #( #simple #exprt )).
+    builder userLevel: #base.
+    self assert: builder build size equals: 1.
+    builder userLevel: #expert.
+    self assert: builder build size equals: 2.
+]
+
+{ #category : 'tests' }
+AXPLFormBuilderTest >> testConfigurationDeNiveauxInvalideRefusee [
+    self should: [ AXPLFormBuilder levels: #() ] raise: Error.
+    self should: [ AXPLFormBuilder levels: #( #simple #simple ) ] raise: Error.
+    self assert: AXPLFormBuilder levels equals: #( #simple #base #expert ).
+]
+
+{ #category : 'tests' }
+AXPLFormBuilderTest >> testPsiValideContreLesNiveauxConfigures [
+    | engine |
+    AXPLFormBuilder levels: #( #visiteur #simple #base #expert ).
+    engine := AXPLReflexivityEngine new metaContainer: container; yourself.
+    engine setLevel: #visiteur ofDescription: 'Nom'.
+    self assert: (engine readDescription: 'Nom') level equals: #visiteur.
+    self should: [ engine setLevel: #inconnu ofDescription: 'Nom' ] raise: Error.
+]

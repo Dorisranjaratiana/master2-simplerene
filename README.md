@@ -26,21 +26,21 @@ Metacello new
 
 ```st
 "Domaine médical"
-SRFormApp new
+AXPLFormApp new
     targetObject: ClientHopital new;
     open.
 ```
 
 ```st
 "Domaine académique"
-SRFormApp new
+AXPLFormApp new
     targetObject: Etudiant new;
     open.
 ```
 
 ## Façade (AXPLFramework)
 
-Un point d'entrée unique cache l'assemblage manuel de ① et Ψ (dériver le metaContainer, construire un `AXPLFormBuilder`, créer l'engine Ψ) — utile dès qu'on n'a pas besoin d'un `SRFormApp` complet (export JSON, script, tests...) :
+Un point d'entrée unique cache l'assemblage manuel de ① et Ψ (dériver le metaContainer, construire un `AXPLFormBuilder`, créer l'engine Ψ) — utile dès qu'on n'a pas besoin d'un `AXPLFormApp` complet (export JSON, script, tests...) :
 
 ```st
 | framework visible |
@@ -49,7 +49,23 @@ visible := framework visibleFieldsAt: #simple.    "① — filtrage par niveau"
 framework psiEngine createField: 'Note interne' type: SRStringDescription level: #expert.    "Ψ"
 ```
 
-La façade s'arrête volontairement avant la construction du visiteur (`AXPLSpecVisitor` a besoin d'un presenter Spec2, `AXPLJsonVisitor` d'un niveau) : ces deux contrats sont légitimement différents selon la cible, c'est le principe même du ⑦ abstrait (`AXPLVisitor`).
+Tous les visiteurs se construisent de la même façon, avec l'objet métier et le niveau — le visiteur Spec2 demande en plus un presenter pour ses widgets :
+
+```st
+json := (AXPLJsonVisitor on: client level: #simple) visit: visible.
+layout := ((AXPLSpecVisitor on: client level: #simple) presenter: unSpPresenter; yourself) visit: visible.
+```
+
+## Niveaux configurables
+
+Les niveaux ne sont pas figés à `#simple #base #expert` : ils se configurent sans toucher au framework, du moins au plus privilégié. Chaque niveau voit ses champs et ceux des niveaux inférieurs ; le dernier voit tout et a accès à Ψ dans `AXPLFormApp`.
+
+```st
+AXPLFormBuilder levels: #(#visiteur #simple #base #expert).
+AXPLFormBuilder resetLevels.    "retour à #(#simple #base #expert)"
+```
+
+Le filtrage ①, la validation Ψ et les listes de l'interface lisent tous `AXPLFormBuilder levels`. Un champ dont le niveau n'est pas dans la liste n'est visible que par le niveau le plus privilégié.
 
 ## Étendre AXPL — le protocole `descriptionForAXPL`
 
@@ -69,7 +85,7 @@ MaClasse class >> descriptionForAXPL [
 | `label:` sur chaque description | **Oui** | Une String, **unique** dans le container — Ψ (`readDescription:`/`relabelDescription:`/`removeField:`) identifie un champ par son label ; un doublon rend le second champ inaccessible à Ψ |
 | `accessor:` sur chaque description | **Oui** | Un Symbol correspondant à un getter/setter d'instance sur `MaClasse` (ex: `#nom` requiert `nom`/`nom:`) |
 | `priority:` sur chaque description | Recommandé | Un Integer — `SRPriorityContainer` trie ses enfants par priorité ; sans cette valeur, l'ordre d'affichage n'est pas garanti |
-| `level:` sur chaque description | Recommandé | `#simple`, `#base` ou `#expert` — sans cette valeur, `#simple` s'applique par défaut (valeur de repli dans `SRDescription >> level`, extension AXPL) |
+| `level:` sur chaque description | Recommandé | Un des niveaux de `AXPLFormBuilder levels` (par défaut `#simple`, `#base`, `#expert`) — sans cette valeur, `#simple` s'applique (valeur de repli dans `SRDescription >> level`, extension AXPL) |
 | `comment:` sur chaque description | Optionnel | Une String (même explication à tous les niveaux) ou un `Dictionary` clé = niveau (② — explicabilité graduée, ex: `Dictionary new at: #simple put: '...'; at: #expert put: '...'; yourself`) |
 | `properties` sur `MaClasse` | Nécessaire **seulement** pour Ψ | `^ properties ifNil: [ properties := Dictionary new ]` — requis uniquement si vous voulez que `AXPLReflexivityEngine>>createField:type:level:` puisse ajouter un champ à l'exécution sans variable d'instance dédiée (voir `SRPluggableAccessor`) |
 
@@ -111,7 +127,7 @@ Produit >> prix [ ^ prix ]
 Produit >> prix: anObject [ prix := anObject ]
 ```
 
-Puis, exactement comme avec `ClientHopital` ou `Etudiant` : `AXPLFramework for: Produit new`, ou `SRFormApp new targetObject: Produit new; open`. **Aucune ligne du framework à modifier.**
+Puis, exactement comme avec `ClientHopital` ou `Etudiant` : `AXPLFramework for: Produit new`, ou `AXPLFormApp new targetObject: Produit new; open`. **Aucune ligne du framework à modifier.**
 
 Votre classe métier n'a pas à vivre dans un package AXPL — `AXPL-Examples` n'est qu'une démonstration ; la vôtre vit dans votre propre package, qui ne requiert qu'`AXPL-Descriptions` dans sa baseline.
 
@@ -122,7 +138,7 @@ Le framework intègre nativement quatre dimensions autour d'une méta-descriptio
 - **A** — Adaptation contextuelle (AXPLFormBuilder, exposé via AXPLFramework)
 - **X** — Explicabilité native (AXPLSpecVisitor)
 - **Ψ** — Réflexivité actionnable (AXPLReflexivityEngine, exposé via AXPLFramework)
-- **L** — Accessibilité Low-Code (SRFormApp)
+- **L** — Accessibilité Low-Code (AXPLFormApp)
 
 ## Packages
 

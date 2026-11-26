@@ -60,3 +60,14 @@ AXPLVisitorDispatchTest >> testAXPLSpecVisitorEstUnAXPLVisitor [
         should: [ AXPLVisitor new visitStringDescription: SRStringDescription new ]
         raise: Error.
 ]
+
+{ #category : 'tests' }
+AXPLVisitorDispatchTest >> testContratDeConstructionCommunAuxVisiteurs [
+    "Spec2 et JSON se construisent de la même façon : objet métier + niveau.
+    AXPLSpecVisitor ne va plus lire le niveau dans la fenêtre."
+    { AXPLSpecVisitor. AXPLJsonVisitor } do: [ :visitorClass |
+        | visitor |
+        visitor := visitorClass on: client level: #base.
+        self assert: visitor targetObject equals: client.
+        self assert: visitor level equals: #base ].
+]

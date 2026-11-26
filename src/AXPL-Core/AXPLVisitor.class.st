@@ -17,11 +17,34 @@ Class {
 	#name : 'AXPLVisitor',
 	#superclass : 'Object',
 	#instVars : [
-		'targetObject'
+		'targetObject',
+		'level'
 	],
 	#category : 'AXPL-Core',
 	#package : 'AXPL-Core'
 }
+
+{ #category : 'instance creation' }
+AXPLVisitor class >> on: aTargetObject level: aLevel [
+	"Contrat de construction commun à tous les visiteurs concrets : l'objet
+	métier à lire/écrire, et le niveau courant (qui choisit l'explication
+	② à afficher). Un visiteur ne va jamais chercher ce niveau dans une
+	fenêtre ou une requête — on le lui donne."
+	^ self new
+		targetObject: aTargetObject;
+		level: aLevel;
+		yourself
+]
+
+{ #category : 'accessing' }
+AXPLVisitor >> level [
+	^ level
+]
+
+{ #category : 'accessing' }
+AXPLVisitor >> level: aSymbol [
+	level := aSymbol
+]
 
 { #category : 'building' }
 AXPLVisitor >> assembleContainer: aCollectionOfItems [

@@ -55,7 +55,7 @@ BaselineOfAXPL >> baseline: spec [
             package: 'AXPL-UI' with: [ spec requires: #('AXPL-Core') ];
             package: 'AXPL-Json' with: [ spec requires: #('AXPL-Core') ];
             package: 'AXPL-Web' with: [ spec requires: #('AXPL-Json' 'Teapot' 'NeoJSON') ];
-            package: 'AXPL-Tests' with: [ spec requires: #('AXPL-Core' 'AXPL-Json' 'AXPL-Examples') ];
+            package: 'AXPL-Tests' with: [ spec requires: #('AXPL-Core' 'AXPL-UI' 'AXPL-Json' 'AXPL-Examples') ];
             package: 'AXPL-Web-Tests' with: [ spec requires: #('AXPL-Web' 'AXPL-Examples') ].
 
         "Groupes de chargement : un simple `load` (sans groupe précisé)

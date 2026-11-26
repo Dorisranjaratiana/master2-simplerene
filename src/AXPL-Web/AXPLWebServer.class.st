@@ -2,7 +2,7 @@
 ""Backend web minimal pour AXPL, prêt à être appelé par un frontend
 séparé (React ou autre). Ne réimplémente rien : réutilise tel quel
 AXPLJsonVisitor (⑦ pour le web), AXPLFormBuilder (①) et
-AXPLReflexivityEngine (Ψ) — la même logique que SRFormApp côté desktop,
+AXPLReflexivityEngine (Ψ) — la même logique que AXPLFormApp côté desktop,
 juste exposée en HTTP via Teapot au lieu de Spec2.
 
 Routes :
@@ -49,7 +49,7 @@ AXPLWebServer class >> onPort: aPort forTargetObject: anObject [
 { #category : 'building' }
 AXPLWebServer >> formJsonFor: aLevelSymbol [
 	"① + ⑦ : même AXPLJsonVisitor que le desktop utilise AXPLSpecVisitor,
-	juste appelé directement plutôt que depuis un SRFormApp Spec2. Le
+	juste appelé directement plutôt que depuis un AXPLFormApp Spec2. Le
 	filtrage ① lui-même est délégué à la façade AXPLFramework, qui
 	dérive déjà le metaContainer et sait construire la liste filtrée."
 	| visible visitor |

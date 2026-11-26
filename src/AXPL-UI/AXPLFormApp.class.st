@@ -11,7 +11,7 @@ updateInterface : méthode centrale qui orchestre ①②⑦⑧⑨⑩.
 targetObject: : point d'entrée — initialise metaContainer et psiEngine puis déclenche le rendu.""
 "
 Class {
-	#name : 'SRFormApp',
+	#name : 'AXPLFormApp',
 	#superclass : 'SpPresenter',
 	#instVars : [
 		'levelDropList',
@@ -30,19 +30,19 @@ Class {
 }
 
 { #category : 'accessing' }
-SRFormApp >> actionBar [
+AXPLFormApp >> actionBar [
 
 	^ actionBar
 ]
 
 { #category : 'accessing' }
-SRFormApp >> actionBar: anObject [
+AXPLFormApp >> actionBar: anObject [
 
 	actionBar := anObject
 ]
 
 { #category : 'layout' }
-SRFormApp >> defaultLayout [
+AXPLFormApp >> defaultLayout [
     ^ SpBoxLayout newTopToBottom
         spacing: 10;
         borderWidth: 15;
@@ -59,40 +59,40 @@ SRFormApp >> defaultLayout [
 ]
 
 { #category : 'accessing' }
-SRFormApp >> formContainer [
+AXPLFormApp >> formContainer [
 
 	^ formContainer
 ]
 
 { #category : 'accessing' }
-SRFormApp >> formContainer: anObject [
+AXPLFormApp >> formContainer: anObject [
 
 	formContainer := anObject
 ]
 
 { #category : 'accessing' }
-SRFormApp >> generateButton [
+AXPLFormApp >> generateButton [
 
 	^ generateButton
 ]
 
 { #category : 'accessing' }
-SRFormApp >> generateButton: anObject [
+AXPLFormApp >> generateButton: anObject [
 
 	generateButton := anObject
 ]
 
 { #category : 'initialization' }
-SRFormApp >> initialize [
+AXPLFormApp >> initialize [
     super initialize.
     targetObject := nil.
 ]
 
 { #category : 'initialization' }
-SRFormApp >> initializePresenters [
+AXPLFormApp >> initializePresenters [
     statusLabel := self newLabel label: 'Prêt'.
     levelDropList := self newDropList
-        items: #( #simple #base #expert );
+        items: AXPLFormBuilder levels;
         display: [ :item | item asString capitalized ];
         whenSelectedItemChangedDo: [ :item | self updateInterface ].
     generateButton := self newButton
@@ -127,7 +127,7 @@ SRFormApp >> initializePresenters [
 ]
 
 { #category : 'initialization' }
-SRFormApp >> initializeWindow: aWindowPresenter [
+AXPLFormApp >> initializeWindow: aWindowPresenter [
     super initializeWindow: aWindowPresenter.
     aWindowPresenter
         title: (targetObject
@@ -137,55 +137,55 @@ SRFormApp >> initializeWindow: aWindowPresenter [
 ]
 
 { #category : 'accessing' }
-SRFormApp >> levelDropList [
+AXPLFormApp >> levelDropList [
 
 	^ levelDropList
 ]
 
 { #category : 'accessing' }
-SRFormApp >> levelDropList: anObject [
+AXPLFormApp >> levelDropList: anObject [
 
 	levelDropList := anObject
 ]
 
 { #category : 'accessing' }
-SRFormApp >> metaContainer [
+AXPLFormApp >> metaContainer [
 
 	^ metaContainer
 ]
 
 { #category : 'accessing' }
-SRFormApp >> metaContainer: anObject [
+AXPLFormApp >> metaContainer: anObject [
 
 	metaContainer := anObject
 ]
 
 { #category : 'accessing' }
-SRFormApp >> psiButton [
+AXPLFormApp >> psiButton [
 
 	^ psiButton
 ]
 
 { #category : 'accessing' }
-SRFormApp >> psiButton: anObject [
+AXPLFormApp >> psiButton: anObject [
 
 	psiButton := anObject
 ]
 
 { #category : 'accessing' }
-SRFormApp >> psiEngine [
+AXPLFormApp >> psiEngine [
 
 	^ psiEngine
 ]
 
 { #category : 'accessing' }
-SRFormApp >> psiEngine: anObject [
+AXPLFormApp >> psiEngine: anObject [
 
 	psiEngine := anObject
 ]
 
 { #category : 'initialization' }
-SRFormApp >> resetInterface [
+AXPLFormApp >> resetInterface [
     "Annule aussi les saisies : targetObject est remplacé par une instance
     fraîche, pas seulement le metaContainer (sinon les valeurs déjà tapées
     restaient malgré le clic sur Annuler)."
@@ -203,7 +203,7 @@ SRFormApp >> resetInterface [
 ]
 
 { #category : 'psi' }
-SRFormApp >> runPsiCreateField [
+AXPLFormApp >> runPsiCreateField [
     "⑥ Ψ crée un champ entièrement nouveau dans le metaContainer, adossé
     au dictionnaire #properties de targetObject plutôt qu'à une variable
     d'instance."
@@ -219,7 +219,7 @@ SRFormApp >> runPsiCreateField [
         initialAnswer: ''.
     (label isNil or: [ label isEmpty ]) ifTrue: [ ^ self ].
 
-    niveaux := #( 'simple' 'base' 'expert' ).
+    niveaux := AXPLFormBuilder levels collect: [ :each | each asString ].
     niveauChoix := UIManager default
         chooseFrom: niveaux
         title: 'Ψ — Niveau du nouveau champ "' , label , '"'.
@@ -249,7 +249,7 @@ SRFormApp >> runPsiCreateField [
 ]
 
 { #category : 'psi' }
-SRFormApp >> runPsiEditField: aLabel [
+AXPLFormApp >> runPsiEditField: aLabel [
     "④⑨ Ψ change le niveau ou renomme un champ existant."
     | choix |
     choix := UIManager default
@@ -257,7 +257,7 @@ SRFormApp >> runPsiEditField: aLabel [
         title: 'Ψ — Que voulez-vous modifier sur "' , aLabel , '" ?'.
     choix = 1 ifTrue: [
         | niveauChoix niveaux nouveauNiveau |
-        niveaux := #( 'simple' 'base' 'expert' ).
+        niveaux := AXPLFormBuilder levels collect: [ :each | each asString ].
         niveauChoix := UIManager default
             chooseFrom: niveaux
             title: 'Ψ — Nouveau niveau pour "' , aLabel , '"'.
@@ -293,7 +293,7 @@ SRFormApp >> runPsiEditField: aLabel [
 ]
 
 { #category : 'psi' }
-SRFormApp >> runPsiMenu [
+AXPLFormApp >> runPsiMenu [
     "Point d'entrée du bouton Ψ : créer, modifier ou supprimer un champ."
     | action |
     action := UIManager default
@@ -305,7 +305,7 @@ SRFormApp >> runPsiMenu [
 ]
 
 { #category : 'psi' }
-SRFormApp >> runPsiRemoveField: aLabel [
+AXPLFormApp >> runPsiRemoveField: aLabel [
     "⑥ Ψ retire un champ entier du metaContainer."
     (UIManager default confirm: 'Supprimer le champ "' , aLabel , '" ?')
         ifFalse: [ ^ self ].
@@ -318,7 +318,7 @@ SRFormApp >> runPsiRemoveField: aLabel [
 ]
 
 { #category : 'psi' }
-SRFormApp >> runPsiSelectFieldThenDo: aBlock [
+AXPLFormApp >> runPsiSelectFieldThenDo: aBlock [
     "Demande à l'utilisateur de choisir un champ existant, puis exécute
     aBlock avec son label. Ne fait rien si l'utilisateur annule."
     | currentLabels index |
@@ -331,7 +331,7 @@ SRFormApp >> runPsiSelectFieldThenDo: aBlock [
 ]
 
 { #category : 'updating' }
-SRFormApp >> save [
+AXPLFormApp >> save [
     "Valide chaque champ du metaContainer (règles réelles de SimpleRene :
     beRequired, bePositive, conditions personnalisées...) avant de confirmer
     l'enregistrement. N'écrit rien de nouveau : les valeurs sont déjà sur
@@ -350,7 +350,7 @@ SRFormApp >> save [
 ]
 
 { #category : 'updating' }
-SRFormApp >> showHiddenFieldsExplanation: aCollectionOfDescriptions [
+AXPLFormApp >> showHiddenFieldsExplanation: aCollectionOfDescriptions [
     "② Explique en un seul écran pourquoi chaque champ masqué ne s'affiche
     pas au niveau courant, au lieu d'un bouton par champ."
     | text |
@@ -362,7 +362,7 @@ SRFormApp >> showHiddenFieldsExplanation: aCollectionOfDescriptions [
 ]
 
 { #category : 'accessing' }
-SRFormApp >> showTrace [
+AXPLFormApp >> showTrace [
     "Affiche le log Ψ horodaté et l'exporte aussi vers un fichier texte,
     pour garder une trace consultable en dehors de l'image Pharo."
     | log text path |
@@ -377,24 +377,24 @@ SRFormApp >> showTrace [
 ]
 
 { #category : 'accessing' }
-SRFormApp >> statusLabel [
+AXPLFormApp >> statusLabel [
 
 	^ statusLabel
 ]
 
 { #category : 'accessing' }
-SRFormApp >> statusLabel: anObject [
+AXPLFormApp >> statusLabel: anObject [
 
 	statusLabel := anObject
 ]
 
 { #category : 'accessing' }
-SRFormApp >> targetObject [
+AXPLFormApp >> targetObject [
 	^ targetObject
 ]
 
 { #category : 'accessing' }
-SRFormApp >> targetObject: anObject [
+AXPLFormApp >> targetObject: anObject [
     targetObject := anObject.
     metaContainer := targetObject class descriptionForAXPL.
     psiEngine := AXPLReflexivityEngine new
@@ -403,7 +403,7 @@ SRFormApp >> targetObject: anObject [
 ]
 
 { #category : 'layout' }
-SRFormApp >> resizeWindowFor: visibleFieldCount hiddenButtonShown: hasHiddenButton [
+AXPLFormApp >> resizeWindowFor: visibleFieldCount hiddenButtonShown: hasHiddenButton [
     "Adapte la hauteur de la fenêtre au nombre de champs réellement
     affichés à ce niveau, au lieu d'une hauteur fixe qui laisse un grand
     vide en Simple/Base et déborde à peine en Expert."
@@ -414,19 +414,19 @@ SRFormApp >> resizeWindowFor: visibleFieldCount hiddenButtonShown: hasHiddenButt
 ]
 
 { #category : 'accessing' }
-SRFormApp >> traceButton [
+AXPLFormApp >> traceButton [
 
 	^ traceButton
 ]
 
 { #category : 'accessing' }
-SRFormApp >> traceButton: anObject [
+AXPLFormApp >> traceButton: anObject [
 
 	traceButton := anObject
 ]
 
 { #category : 'updating' }
-SRFormApp >> updateInterface [
+AXPLFormApp >> updateInterface [
     | builder visibleDescs hidden visitor newLayout |
     targetObject ifNil: [ ^ self ].
 
@@ -442,8 +442,8 @@ SRFormApp >> updateInterface [
     statusLabel label: levelDropList selectedItem asString capitalized
         , ' Formulaire pour ' , targetObject class name.
 
-    "Ψ — visible seulement en expert"
-    levelDropList selectedItem = #expert
+    "Ψ — réservé au niveau le plus privilégié"
+    levelDropList selectedItem = AXPLFormBuilder mostPrivilegedLevel
         ifTrue: [
             traceButton visible: true.
             psiButton
@@ -458,9 +458,9 @@ SRFormApp >> updateInterface [
                 action: [ ] ].
 
     "⑦ Génération widgets (L)"
-    visitor := AXPLSpecVisitor new
-        targetObject: targetObject;
-        presenter: self.
+    visitor := (AXPLSpecVisitor on: targetObject level: levelDropList selectedItem)
+        presenter: self;
+        yourself.
     newLayout := visitor visit: visibleDescs.
 
     "② Champs masqués avec explication (X) — un seul bouton groupé plutôt

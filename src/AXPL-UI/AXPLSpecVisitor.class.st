@@ -5,7 +5,11 @@ Implémente les relations ⑦ (Méta → L) et ⑧ (L → Utilisateur).
 Chaque visitXxx: génère le widget approprié avec label, tooltip (②) et binding.
 assembleContainer: empile les widgets déjà construits dans un SpBoxLayout vertical.
 withLabel:for: assemble label + widget en ligne horizontale.
-Travaille toujours sur le metaContainer partagé via les descriptions filtrées.""
+Travaille toujours sur le metaContainer partagé via les descriptions filtrées.
+Construction : (AXPLSpecVisitor on: anObject level: aLevel) presenter: unSpPresenter.
+Le niveau lui est donné (comme à AXPLJsonVisitor) ; presenter ne sert
+qu'aux fabriques de widgets Spec2 (newLabel, newTextInput...) — n'importe
+quel SpPresenter convient, pas seulement la fenêtre AXPLFormApp.""
 "
 Class {
 	#name : 'AXPLSpecVisitor',
@@ -43,7 +47,7 @@ AXPLSpecVisitor >> presenter: aPresenter [
 AXPLSpecVisitor >> visitBooleanDescription: aDesc [
     | checkbox currentLevel explicabilityText |
     
-    currentLevel := presenter levelDropList selectedItem.
+    currentLevel := level.
     explicabilityText := aDesc commentFor: currentLevel.
 
     checkbox := presenter newCheckBox.
@@ -62,7 +66,7 @@ AXPLSpecVisitor >> visitBooleanDescription: aDesc [
 AXPLSpecVisitor >> visitDateDescription: aDescription [
     | input dateValue currentLevel explicabilityText label |
     
-    currentLevel := presenter levelDropList selectedItem.
+    currentLevel := level.
     explicabilityText := aDescription commentFor: currentLevel.
 
     input := SpDatePresenter new.
@@ -81,7 +85,7 @@ AXPLSpecVisitor >> visitDateDescription: aDescription [
 AXPLSpecVisitor >> visitNumberDescription: aDescription [
     | input numValue currentLevel explicabilityText label |
     
-    currentLevel := presenter levelDropList selectedItem.
+    currentLevel := level.
     explicabilityText := aDescription commentFor: currentLevel.
 
     input := presenter newNumberInput.
@@ -102,7 +106,7 @@ AXPLSpecVisitor >> visitNumberDescription: aDescription [
 AXPLSpecVisitor >> visitSingleOptionDescription: aDesc [
     | drop row label currentLevel explicabilityText |
 
-    currentLevel := presenter levelDropList selectedItem.
+    currentLevel := level.
     explicabilityText := aDesc commentFor: currentLevel.
 
     label := presenter newLabel label: (self labelTextFor: aDesc).
@@ -124,7 +128,7 @@ AXPLSpecVisitor >> visitSingleOptionDescription: aDesc [
 AXPLSpecVisitor >> visitStringDescription: aDesc [
     | input row label currentLevel explicabilityText value |
     
-    currentLevel := presenter levelDropList selectedItem.
+    currentLevel := level.
     explicabilityText := aDesc commentFor: currentLevel.
 
     label := presenter newLabel label: (self labelTextFor: aDesc).

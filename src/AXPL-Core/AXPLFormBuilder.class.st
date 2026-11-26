@@ -1,9 +1,15 @@
 "
 ""Moteur de filtrage adaptatif. Implémente la relation ① (A → Méta).
-Reçoit : targetObject, userLevel (#simple/#base/#expert), metaContainer.
+Reçoit : targetObject, userLevel, metaContainer.
 build : retourne uniquement les descriptions visibles selon le niveau.
-canUserSee: : logique de filtrage — simple voit simple, base voit simple+base, expert voit tout.
-Ne recrée jamais le container — travaille toujours sur le metaContainer partagé.""
+canUserSee: : filtrage par rang — un niveau voit les champs de son rang
+et de tous les rangs inférieurs ; le niveau le plus privilégié voit tout.
+Ne recrée jamais le container — travaille toujours sur le metaContainer partagé.
+
+Les niveaux sont configurables sans modifier le framework :
+    AXPLFormBuilder levels: #(#visiteur #simple #base #expert).
+    AXPLFormBuilder resetLevels.    ""retour à #(#simple #base #expert)""
+""
 "
 Class {
 	#name : 'AXPLFormBuilder',
@@ -13,15 +19,43 @@ Class {
 		'targetObject',
 		'metaContainer'
 	],
+	#classInstVars : [
+		'levels'
+	],
 	#category : 'AXPL-Core',
 	#package : 'AXPL-Core'
 }
 
 { #category : 'accessing' }
+AXPLFormBuilder class >> defaultLevels [
+	^ #( #simple #base #expert )
+]
+
+{ #category : 'accessing' }
 AXPLFormBuilder class >> levels [
-    "Source unique des niveaux reconnus par le framework, du moins au plus
-    privilégié — le moteur Ψ s'en sert aussi pour valider un niveau."
-    ^ #( #simple #base #expert )
+	"Source unique des niveaux reconnus par tout le framework (filtrage ①,
+	validation Ψ, listes de l'UI), du moins au plus privilégié."
+	^ levels ifNil: [ self defaultLevels ]
+]
+
+{ #category : 'accessing' }
+AXPLFormBuilder class >> levels: anArrayOfSymbols [
+	anArrayOfSymbols isEmpty ifTrue: [
+		Error signal: 'Il faut au moins un niveau.' ].
+	anArrayOfSymbols asSet size = anArrayOfSymbols size ifFalse: [
+		Error signal: 'Niveaux en double : ' , anArrayOfSymbols printString ].
+	levels := anArrayOfSymbols asArray
+]
+
+{ #category : 'accessing' }
+AXPLFormBuilder class >> mostPrivilegedLevel [
+	"Le niveau qui voit tout — c'est aussi celui qui a accès à Ψ dans l'UI."
+	^ self levels last
+]
+
+{ #category : 'accessing' }
+AXPLFormBuilder class >> resetLevels [
+	levels := nil
 ]
 
 { #category : 'building' }
@@ -34,15 +68,16 @@ AXPLFormBuilder >> build [
 
 { #category : 'testing' }
 AXPLFormBuilder >> canUserSee: aDescription [
-    "L'Expert voit absolument tout"
-    userLevel = #expert ifTrue: [ ^ true ].
-    
-    "Le niveau Base voit Simple et Base"
-    userLevel = #base ifTrue: [ ^ aDescription level = #base 
-        or: [ aDescription level = #simple ] ].
-    
-    "Le niveau Simple voit uniquement Simple"
-    ^ aDescription level = #simple
+    "Visible si le rang du champ est inférieur ou égal à celui de
+    l'utilisateur. Un champ dont le niveau n'est pas reconnu (faute de
+    frappe dans descriptionForAXPL) n'est vu que par le niveau le plus
+    privilégié, comme avant — jamais exposé aux autres par erreur."
+    | levels userRank fieldRank |
+    levels := self class levels.
+    userRank := levels indexOf: userLevel.
+    userRank = levels size ifTrue: [ ^ true ].
+    fieldRank := levels indexOf: aDescription level.
+    ^ fieldRank > 0 and: [ fieldRank <= userRank ]
 ]
 
 { #category : 'accessing' }
@@ -58,9 +93,8 @@ AXPLFormBuilder >> targetObject: anObject [
 
 { #category : 'accessing' }
 AXPLFormBuilder >> userLevel: aSymbol [
-	"Définit le rôle : #simple, #base ou #expert. Un niveau invalide était
-	auparavant traité silencieusement comme #simple (aucun des = ne
-	matchait) — dangereux maintenant qu'AXPLWebServer accepte ce niveau
+	"Un niveau invalide était auparavant traité silencieusement comme le
+	plus bas — dangereux maintenant qu'AXPLWebServer accepte ce niveau
 	depuis une requête HTTP externe non fiable."
 	(self class levels includes: aSymbol) ifFalse: [
 		Error signal: 'Niveau invalide : ' , aSymbol printString ,

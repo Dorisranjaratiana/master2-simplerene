@@ -13,20 +13,9 @@ prend pas parti sur lequel utiliser.""
 Class {
 	#name : 'AXPLJsonVisitor',
 	#superclass : 'AXPLVisitor',
-	#instVars : [
-		'level'
-	],
 	#category : 'AXPL-Json',
 	#package : 'AXPL-Json'
 }
-
-{ #category : 'instance creation' }
-AXPLJsonVisitor class >> on: aTargetObject level: aLevel [
-	^ self new
-		targetObject: aTargetObject;
-		level: aLevel;
-		yourself
-]
 
 { #category : 'building' }
 AXPLJsonVisitor >> assembleContainer: aCollectionOfItems [
@@ -45,16 +34,6 @@ AXPLJsonVisitor >> jsonFor: aDescription type: aTypeString [
 		at: #help put: (aDescription commentFor: level);
 		at: #value put: (aDescription read: self targetObject);
 		yourself
-]
-
-{ #category : 'accessing' }
-AXPLJsonVisitor >> level [
-	^ level
-]
-
-{ #category : 'accessing' }
-AXPLJsonVisitor >> level: aSymbol [
-	level := aSymbol
 ]
 
 { #category : 'visiting' }
