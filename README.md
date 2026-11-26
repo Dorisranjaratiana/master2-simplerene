@@ -37,8 +37,11 @@ Version de développement (dernières modifications, peut changer à tout moment
 - Ψ : création, suppression, renommage (explications ② conservées, doublons refusés), changement de niveau validé, traçabilité horodatée
 - explication des champs masqués par le niveau qui les débloque (desktop et web)
 - types SimpleRene non gérés refusés explicitement ; mots de passe masqués et jamais renvoyés au web
+- toute saisie validée par les règles de SimpleRene avant d'être écrite ; une saisie refusée est signalée (infobulle du champ, haut de la fenêtre) et bloque Enregistrer ; le web renvoie le message de SimpleRene
+- interface desktop (`AXPLFormApp`) : écran neutre au départ et après Annuler, un niveau choisi s'affiche directement, fenêtre ajustée au nombre de champs et jamais plus haute que l'écran
+- serveur web : CORS complet pour un frontend séparé, mode débogage de Zinc désactivé par défaut
 - groupes de chargement `core` (100% Pharo) et `web`
-- 75 tests (cœur, Ψ, visiteurs, interface desktop, serveur web), exécutés par la CI à chaque push
+- 89 tests (cœur, Ψ, validation, visiteurs, interface desktop dont une vraie fenêtre ouverte, serveur web), exécutés par la CI à chaque push
 
 ## Utilisation
 
