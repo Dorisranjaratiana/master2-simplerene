@@ -156,3 +156,18 @@ AXPLFormAppTest >> testAnnulerDepuisExpertRevientALEcranNeutre [
     self assert: app formContainer layout presenters isEmpty.
     self deny: (app bodyContainer layout presenters includes: app actionBar).
 ]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testRevenirDExpertASimpleRepartDUnFormulaireNeuf [
+    "Régression : le conteneur du formulaire était réutilisé d'un niveau
+    à l'autre ; son widget gardait la taille du formulaire Expert, et
+    Simple s'affichait avec des barres de défilement inutiles."
+    | conteneurExpert |
+    app levelDropList selectItem: #expert.
+    conteneurExpert := app formContainer.
+    app levelDropList selectItem: #simple.
+    self deny: app formContainer == conteneurExpert.
+    self
+        assert: app formContainer layout presenters size
+        equals: ((AXPLFramework for: client) visibleFieldsAt: #simple) size + 1.
+]
