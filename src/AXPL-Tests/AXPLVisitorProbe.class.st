@@ -46,3 +46,8 @@ AXPLVisitorProbe >> visitSingleOptionDescription: aDescription [
 AXPLVisitorProbe >> visitStringDescription: aDescription [
 	^ #stringVisited
 ]
+
+{ #category : 'visiting' }
+AXPLVisitorProbe >> visitPasswordDescription: aDescription [
+	^ #passwordVisited
+]

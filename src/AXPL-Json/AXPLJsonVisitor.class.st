@@ -55,6 +55,16 @@ AXPLJsonVisitor >> visitNumberDescription: aDescription [
 ]
 
 { #category : 'visiting' }
+AXPLJsonVisitor >> visitPasswordDescription: aDescription [
+	"Le mot de passe stocké n'est jamais renvoyé au client : un champ
+	password s'écrit (POST /field), il ne se relit pas."
+	| json |
+	json := self jsonFor: aDescription type: 'password'.
+	json at: #value put: nil.
+	^ json
+]
+
+{ #category : 'visiting' }
 AXPLJsonVisitor >> visitSingleOptionDescription: aDescription [
 	| json |
 	json := self jsonFor: aDescription type: 'select'.

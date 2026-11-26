@@ -98,6 +98,9 @@ Toutes réelles, de SimpleRene, étendues par `AXPL-Descriptions` (jamais réimp
 - `SRBooleanDescription` — case à cocher
 - `SRDateDescription` — date
 - `SRSingleOptionDescription` — liste déroulante (requiert aussi `options: #('A' 'B' ...)`)
+- `SRPasswordDescription` — mot de passe : masqué sur le desktop, **jamais renvoyé** dans le JSON du web (il s'écrit, il ne se relit pas)
+
+`SRMemoDescription` est affiché comme un texte d'une ligne. Tout autre type SimpleRene (`SRTimeDescription`, `SRDateAndTimeDescription`, `SRMultipleOptionDescription`, `SRSymbolDescription`, relations, fichiers…) **lève une erreur explicite** au rendu (« Type de description non supporté par AXPL : … ») plutôt que de devenir un champ texte qui n'enregistrerait jamais rien. Pour en ajouter un : une méthode d'extension `acceptAXPLVisitor:` sur la classe SimpleRene, et la méthode `visitXxxDescription:` correspondante dans chaque visiteur.
 
 Validation native de SimpleRene, transparente avec AXPL : `beRequired`, `bePositive`, `addCondition: [ :v | ... ] labelled: 'message'`.
 

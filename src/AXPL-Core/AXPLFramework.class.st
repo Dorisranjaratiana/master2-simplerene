@@ -58,14 +58,28 @@ AXPLFramework >> targetObject: anObject [
 		yourself
 ]
 
+{ #category : 'private' }
+AXPLFramework >> builderAt: aLevelSymbol [
+	^ AXPLFormBuilder new
+		targetObject: targetObject;
+		userLevel: aLevelSymbol;
+		metaContainer: metaContainer;
+		yourself
+]
+
+{ #category : 'building' }
+AXPLFramework >> hiddenFieldsAt: aLevelSymbol [
+	"② — le complément exact de visibleFieldsAt: : les champs masqués à ce
+	niveau, pour pouvoir expliquer à l'utilisateur ce qu'il ne voit pas."
+	| builder |
+	builder := self builderAt: aLevelSymbol.
+	^ metaContainer children reject: [ :d | builder canUserSee: d ]
+]
+
 { #category : 'building' }
 AXPLFramework >> visibleFieldsAt: aLevelSymbol [
 	"① — la liste filtrée de descriptions visibles à ce niveau, prête à
 	être passée à visit: sur n'importe quel AXPLVisitor concret (Spec2,
 	JSON, ou un futur visiteur)."
-	^ (AXPLFormBuilder new
-		targetObject: targetObject;
-		userLevel: aLevelSymbol;
-		metaContainer: metaContainer;
-		yourself) build
+	^ (self builderAt: aLevelSymbol) build
 ]

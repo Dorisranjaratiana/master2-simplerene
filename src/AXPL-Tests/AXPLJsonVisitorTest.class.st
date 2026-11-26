@@ -78,3 +78,13 @@ AXPLJsonVisitorTest >> testJsonVisitorSingleOptionDescription [
     self assert: (json at: #value) equals: 'Féminin'.
     self assert: (json at: #options) equals: #('Masculin' 'Féminin' 'Autre').
 ]
+
+{ #category : 'tests' }
+AXPLJsonVisitorTest >> testJsonVisitorPasswordNeRenvoieJamaisLaValeur [
+    | desc json |
+    desc := SRPasswordDescription new label: 'Mot de passe'; accessor: #nom; yourself.
+    client nom: 'secret'.
+    json := desc acceptAXPLVisitor: (AXPLJsonVisitor on: client level: #simple).
+    self assert: (json at: #type) equals: 'password'.
+    self assert: (json at: #value) isNil.
+]

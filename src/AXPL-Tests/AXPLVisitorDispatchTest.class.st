@@ -71,3 +71,26 @@ AXPLVisitorDispatchTest >> testContratDeConstructionCommunAuxVisiteurs [
         self assert: visitor targetObject equals: client.
         self assert: visitor level equals: #base ].
 ]
+
+{ #category : 'tests' }
+AXPLVisitorDispatchTest >> testPasswordAUnDispatchDedie [
+    "Sans dispatch dédié, un mot de passe héritait de visitStringDescription:
+    (affiché en clair, renvoyé en clair au web)."
+    self
+        assert: ((SRPasswordDescription new accessor: #nom; yourself) acceptAXPLVisitor: AXPLVisitorProbe new)
+        equals: #passwordVisited.
+]
+
+{ #category : 'tests' }
+AXPLVisitorDispatchTest >> testTypeNonSupporteRefuseClairement [
+    "Un type que le framework ne sait pas rendre doit échouer avec un
+    message, pas devenir un champ texte qui n'enregistre jamais rien."
+    | visitor |
+    visitor := AXPLJsonVisitor on: client level: #simple.
+    {
+        SRTimeDescription new label: 'Heure'; accessor: #nom; yourself.
+        SRSymbolDescription new label: 'Code'; accessor: #nom; yourself.
+        SRMultipleOptionDescription new label: 'Tags'; accessor: #nom; yourself
+    } do: [ :desc |
+        self should: [ desc acceptAXPLVisitor: visitor ] raise: Error ].
+]

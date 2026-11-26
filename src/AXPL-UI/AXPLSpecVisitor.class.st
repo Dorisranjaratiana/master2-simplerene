@@ -125,9 +125,19 @@ AXPLSpecVisitor >> visitSingleOptionDescription: aDesc [
 ]
 
 { #category : 'visiting' }
+AXPLSpecVisitor >> visitPasswordDescription: aDesc [
+    ^ self textRowFor: aDesc password: true
+]
+
+{ #category : 'visiting' }
 AXPLSpecVisitor >> visitStringDescription: aDesc [
+    ^ self textRowFor: aDesc password: false
+]
+
+{ #category : 'private' }
+AXPLSpecVisitor >> textRowFor: aDesc password: isPassword [
     | input row label currentLevel explicabilityText value |
-    
+
     currentLevel := level.
     explicabilityText := aDesc commentFor: currentLevel.
 
@@ -135,6 +145,7 @@ AXPLSpecVisitor >> visitStringDescription: aDesc [
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
 
     input := presenter newTextInput.
+    isPassword ifTrue: [ input bePassword ].
     value := aDesc read: targetObject.
     input text: (value ifNil: [ '' ] ifNotNil: [ value asString ]).
     input whenTextChangedDo: [ :txt |

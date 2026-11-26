@@ -57,3 +57,14 @@ AXPLFrameworkTest >> testPsiEngineOpereSurLeMemeMetaContainer [
     desc := framework metaContainer children detect: [ :d | d label = 'Note interne' ] ifNone: [ nil ].
     self assert: desc notNil.
 ]
+
+{ #category : 'tests' }
+AXPLFrameworkTest >> testHiddenFieldsAtEstLeComplementDeVisibleFieldsAt [
+    AXPLFormBuilder levels do: [ :lvl |
+        | visible hidden |
+        visible := framework visibleFieldsAt: lvl.
+        hidden := framework hiddenFieldsAt: lvl.
+        self assert: visible size + hidden size equals: framework metaContainer children size.
+        self deny: (hidden anySatisfy: [ :d | visible includes: d ]) ].
+    self assert: (framework hiddenFieldsAt: AXPLFormBuilder mostPrivilegedLevel) isEmpty.
+]

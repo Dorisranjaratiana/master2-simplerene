@@ -84,8 +84,19 @@ AXPLVisitor >> visitDateDescription: aDescription [
 
 { #category : 'visiting' }
 AXPLVisitor >> visitDescription: aDescription [
-	"Si on ne connaît pas le type spécifique, on affiche un champ texte par défaut"
-	^ self visitStringDescription: aDescription
+	"Atteint pour tout type SimpleRene qu'AXPL ne sait pas rendre (Time,
+	DateAndTime, MultipleOption, relations, fichiers...). Avant, il
+	retombait sur un champ texte : la saisie était ensuite refusée par la
+	validation de type, ou écrite dans le mauvais type, sans aucun
+	message. Un framework doit refuser clairement ce qu'il ne gère pas."
+	^ Error signal: 'Type de description non supporté par AXPL : ' ,
+		aDescription class name , ' (champ "' , aDescription label asString ,
+		'"). Types supportés : String, Number, Boolean, Date, SingleOption, Password.'
+]
+
+{ #category : 'visiting' }
+AXPLVisitor >> visitPasswordDescription: aDescription [
+	^ self subclassResponsibility
 ]
 
 { #category : 'visiting' }

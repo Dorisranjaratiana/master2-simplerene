@@ -1,14 +1,14 @@
 "
 ""Presenter principal du framework AXPL. Orchestre toutes les relations architecturales.
 Slots principaux :
-  - metaContainer : source unique de vérité, initialisé une seule fois dans targetObject:
-  - psiEngine : moteur Ψ, initialisé une seule fois, garde les modifications en mémoire
+  - framework : la façade AXPLFramework — porte le metaContainer (source
+    unique de vérité) et l'unique moteur Ψ, créés une seule fois dans targetObject:
   - levelDropList : sélection du niveau utilisateur (⑨)
-  - psiButton : bouton Ψ visible seulement en mode Expert — ouvre runPsiMenu
-    (créer ⑥ / modifier ④⑨ / supprimer ⑥ un champ)
-  - traceButton : affiche le log horodaté [t] en mode Expert
+  - psiButton : bouton Ψ visible seulement au niveau le plus privilégié —
+    ouvre runPsiMenu (créer ⑥ / modifier ④⑨ / supprimer ⑥ un champ)
+  - traceButton : affiche le log horodaté [t] au niveau le plus privilégié
 updateInterface : méthode centrale qui orchestre ①②⑦⑧⑨⑩.
-targetObject: : point d'entrée — initialise metaContainer et psiEngine puis déclenche le rendu.""
+targetObject: : point d'entrée — crée la façade puis déclenche le rendu.""
 "
 Class {
 	#name : 'AXPLFormApp',
@@ -21,8 +21,7 @@ Class {
 		'targetObject',
 		'actionBar',
 		'psiButton',
-		'metaContainer',
-		'psiEngine',
+		'framework',
 		'traceButton'
 	],
 	#category : 'AXPL-UI',
@@ -150,14 +149,7 @@ AXPLFormApp >> levelDropList: anObject [
 
 { #category : 'accessing' }
 AXPLFormApp >> metaContainer [
-
-	^ metaContainer
-]
-
-{ #category : 'accessing' }
-AXPLFormApp >> metaContainer: anObject [
-
-	metaContainer := anObject
+	^ framework metaContainer
 ]
 
 { #category : 'accessing' }
@@ -174,14 +166,7 @@ AXPLFormApp >> psiButton: anObject [
 
 { #category : 'accessing' }
 AXPLFormApp >> psiEngine [
-
-	^ psiEngine
-]
-
-{ #category : 'accessing' }
-AXPLFormApp >> psiEngine: anObject [
-
-	psiEngine := anObject
+	^ framework psiEngine
 ]
 
 { #category : 'initialization' }
@@ -189,11 +174,7 @@ AXPLFormApp >> resetInterface [
     "Annule aussi les saisies : targetObject est remplacé par une instance
     fraîche, pas seulement le metaContainer (sinon les valeurs déjà tapées
     restaient malgré le clic sur Annuler)."
-    targetObject := targetObject class new.
-    metaContainer := targetObject class descriptionForAXPL.
-    psiEngine := AXPLReflexivityEngine new
-        metaContainer: metaContainer;
-        yourself.
+    self targetObject: targetObject class new.
     formContainer layout: SpBoxLayout newVertical.
     statusLabel label: 'Sélectionnez un niveau et cliquez sur Rafraîchir.'.
     levelDropList selectIndex: 1.
@@ -234,10 +215,10 @@ AXPLFormApp >> runPsiCreateField [
                 initialAnswer: ''.
             (optionsText isNil or: [ optionsText isEmpty ]) ifTrue: [ ^ self ].
             options := ((optionsText substrings: ',') collect: [ :each | each trimBoth ]) asArray.
-            psiEngine createSelectionField: label options: options level: niveau ]
+            self psiEngine createSelectionField: label options: options level: niveau ]
         ifFalse: [
             typeClasses := { SRStringDescription. SRNumberDescription. SRBooleanDescription. SRDateDescription }.
-            psiEngine createField: label type: (typeClasses at: typeChoix) level: niveau ] ]
+            self psiEngine createField: label type: (typeClasses at: typeChoix) level: niveau ] ]
         on: Error
         do: [ :err | ^ self inform: 'Ψ refusé : ' , err messageText ].
 
@@ -266,7 +247,7 @@ AXPLFormApp >> runPsiEditField: aLabel [
             (UIManager default confirm:
                 'Changer le niveau de "' , aLabel , '" en #' , nouveauNiveau , ' ?')
                 ifTrue: [
-                    psiEngine setLevel: nouveauNiveau ofDescription: aLabel.
+                    self psiEngine setLevel: nouveauNiveau ofDescription: aLabel.
                     self inform:
                         'Ψ appliqué : "' , aLabel
                         , '" → niveau #' , nouveauNiveau
@@ -282,7 +263,7 @@ AXPLFormApp >> runPsiEditField: aLabel [
             (UIManager default confirm:
                 'Renommer "' , aLabel , '" en "' , nouveauLabel , '" ?')
                 ifTrue: [
-                    [ psiEngine relabelDescription: aLabel to: nouveauLabel ]
+                    [ self psiEngine relabelDescription: aLabel to: nouveauLabel ]
                         on: Error
                         do: [ :err | ^ self inform: 'Ψ refusé : ' , err messageText ].
                     self inform:
@@ -309,7 +290,7 @@ AXPLFormApp >> runPsiRemoveField: aLabel [
     "⑥ Ψ retire un champ entier du metaContainer."
     (UIManager default confirm: 'Supprimer le champ "' , aLabel , '" ?')
         ifFalse: [ ^ self ].
-    psiEngine removeField: aLabel.
+    self psiEngine removeField: aLabel.
     self inform:
         'Ψ : champ "' , aLabel , '" supprimé.'
         , String cr
@@ -322,7 +303,7 @@ AXPLFormApp >> runPsiSelectFieldThenDo: aBlock [
     "Demande à l'utilisateur de choisir un champ existant, puis exécute
     aBlock avec son label. Ne fait rien si l'utilisateur annule."
     | currentLabels index |
-    currentLabels := metaContainer children collect: [ :d | d label ].
+    currentLabels := self metaContainer children collect: [ :d | d label ].
     index := UIManager default
         chooseFrom: currentLabels
         title: 'Ψ — Choisir le champ'.
@@ -338,7 +319,7 @@ AXPLFormApp >> save [
     targetObject au fil de la saisie (cf. AXPLSpecVisitor), cette étape ne
     fait que vérifier qu'elles sont toutes valides."
     | invalides |
-    invalides := metaContainer children
+    invalides := self metaContainer children
         reject: [ :d | d isSatisfiedBy: (d read: targetObject) ].
     invalides isEmpty
         ifTrue: [ self inform: 'Enregistré : toutes les valeurs sont valides.' ]
@@ -366,7 +347,7 @@ AXPLFormApp >> showTrace [
     "Affiche le log Ψ horodaté et l'exporte aussi vers un fichier texte,
     pour garder une trace consultable en dehors de l'image Pharo."
     | log text path |
-    log := psiEngine traceLog.
+    log := self psiEngine traceLog.
     log isEmpty
         ifTrue: [ ^ self inform: 'Aucune intercession enregistrée.' ].
     text := log inject: '' into: [ :acc :each |
@@ -396,10 +377,7 @@ AXPLFormApp >> targetObject [
 { #category : 'accessing' }
 AXPLFormApp >> targetObject: anObject [
     targetObject := anObject.
-    metaContainer := targetObject class descriptionForAXPL.
-    psiEngine := AXPLReflexivityEngine new
-        metaContainer: metaContainer;
-        yourself.
+    framework := AXPLFramework for: anObject.
 ]
 
 { #category : 'layout' }
@@ -427,16 +405,12 @@ AXPLFormApp >> traceButton: anObject [
 
 { #category : 'updating' }
 AXPLFormApp >> updateInterface [
-    | builder visibleDescs hidden visitor newLayout |
+    | level visibleDescs hidden visitor newLayout |
     targetObject ifNil: [ ^ self ].
+    level := levelDropList selectedItem.
 
     "① Filtrage adaptatif (A)"
-    builder := AXPLFormBuilder new
-        targetObject: targetObject;
-        userLevel: levelDropList selectedItem;
-        metaContainer: metaContainer;
-        yourself.
-    visibleDescs := builder build.
+    visibleDescs := framework visibleFieldsAt: level.
 
     "Titre contextuel"
     statusLabel label: levelDropList selectedItem asString capitalized
@@ -458,15 +432,14 @@ AXPLFormApp >> updateInterface [
                 action: [ ] ].
 
     "⑦ Génération widgets (L)"
-    visitor := (AXPLSpecVisitor on: targetObject level: levelDropList selectedItem)
+    visitor := (AXPLSpecVisitor on: targetObject level: level)
         presenter: self;
         yourself.
     newLayout := visitor visit: visibleDescs.
 
     "② Champs masqués avec explication (X) — un seul bouton groupé plutôt
     qu'un par champ, pour ne pas noyer les champs visibles."
-    hidden := metaContainer children
-        reject: [ :d | builder canUserSee: d ].
+    hidden := framework hiddenFieldsAt: level.
     hidden notEmpty ifTrue: [
         newLayout add: (self newButton
             icon: (self iconNamed: #help);
