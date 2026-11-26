@@ -179,8 +179,8 @@ AXPLFormApp >> resetInterface [
     statusLabel label: 'Sélectionnez un niveau et cliquez sur Rafraîchir.'.
     levelDropList selectIndex: 1.
     actionBar visible: false.
-    self resizeWindowFor: 0 hiddenButtonShown: false.
     self update.
+    self resizeWindowFor: 0 hiddenButtonShown: false.
 ]
 
 { #category : 'psi' }
@@ -411,10 +411,20 @@ AXPLFormApp >> resizeWindowFor: visibleFieldCount hiddenButtonShown: hasHiddenBu
     "Adapte la hauteur de la fenêtre au nombre de champs réellement
     affichés à ce niveau, au lieu d'une hauteur fixe qui laisse un grand
     vide en Simple/Base et déborde à peine en Expert."
-    | rowCount desiredHeight |
+    "Corrigé : on appelait `self window extent:`, qui n'est que
+    SpPresenter >> extent: (^ extent := aPoint) — la valeur était
+    mémorisée mais la fenêtre déjà ouverte ne bougeait jamais.
+    SpWindowPresenter >> resize: passe par l'adaptateur Morphic et
+    redimensionne réellement la fenêtre (ou attend qu'elle s'ouvre)."
+    self window ifNotNil: [ :w |
+        w resize: 500 @ (self desiredHeightFor: visibleFieldCount hiddenButtonShown: hasHiddenButton) ].
+]
+
+{ #category : 'layout' }
+AXPLFormApp >> desiredHeightFor: visibleFieldCount hiddenButtonShown: hasHiddenButton [
+    | rowCount |
     rowCount := visibleFieldCount + (hasHiddenButton ifTrue: [ 1 ] ifFalse: [ 0 ]).
-    desiredHeight := ((rowCount * 41) + 270) min: 950 max: 400.
-    self window ifNotNil: [ :w | w extent: 500 @ desiredHeight ].
+    ^ ((rowCount * 41) + 270) min: 950 max: 400
 ]
 
 { #category : 'accessing' }
@@ -475,6 +485,8 @@ AXPLFormApp >> updateInterface [
 
     formContainer layout: newLayout.
     actionBar visible: true.
-    self resizeWindowFor: visibleDescs size hiddenButtonShown: hidden notEmpty.
     self update.
+    "Après la reconstruction, pas avant : c'est la fenêtre reconstruite
+    qu'on redimensionne."
+    self resizeWindowFor: visibleDescs size hiddenButtonShown: hidden notEmpty.
 ]

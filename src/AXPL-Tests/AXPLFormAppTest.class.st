@@ -84,3 +84,28 @@ AXPLFormAppTest >> testExplicationDesChampsMasquesDonneLeNiveauRequis [
     self assert: (text includesSubstring: 'Allergies — visible à partir du niveau Expert').
     self assert: (text includesSubstring: 'Médecin Référent — visible à partir du niveau Base').
 ]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testHauteurSouhaiteeSuitLeNombreDeChamps [
+    self assert: (app desiredHeightFor: 5 hiddenButtonShown: true)
+        < (app desiredHeightFor: 11 hiddenButtonShown: true).
+    self assert: (app desiredHeightFor: 0 hiddenButtonShown: false) equals: 400.
+    self assert: (app desiredHeightFor: 100 hiddenButtonShown: false) equals: 950.
+]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testLaFenetreOuverteSAdapteAuNiveau [
+    "Régression : resizeWindowFor: appelait SpPresenter >> extent:, qui ne
+    fait que mémoriser une valeur — la fenêtre ouverte gardait la même
+    taille en Simple, Base et Expert. Ce test ouvre une vraie fenêtre et
+    mesure sa hauteur à chaque niveau."
+    | window heights |
+    window := app open.
+    [ heights := AXPLFormBuilder levels collect: [ :lvl |
+            app levelDropList selectItem: lvl.
+            app updateInterface.
+            window adapter widget height ].
+      self assert: heights first < heights second.
+      self assert: heights second < heights last ]
+        ensure: [ window close ].
+]
