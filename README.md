@@ -10,6 +10,7 @@ Version stable **v1.0.0** — figée, reproductible (le même code à chaque cha
 Metacello new
     baseline: 'AXPL';
     repository: 'github://Dorisranjaratiana/master2-simplerene:v1.0.0/src';
+    onConflict: [ :ex | ex useIncoming ];
     load.
 ```
 
@@ -19,10 +20,13 @@ Pour charger en plus la partie web (serveur HTTP `AXPL-Web`, Teapot, NeoJSON) :
 Metacello new
     baseline: 'AXPL';
     repository: 'github://Dorisranjaratiana/master2-simplerene:v1.0.0/src';
+    onConflict: [ :ex | ex useIncoming ];
     load: #('web').
 ```
 
 Version de développement (dernières modifications, peut changer à tout moment) : remplacer `v1.0.0` par `integration-simplerene`.
+
+`onConflict: [ :ex | ex useIncoming ]` : SimpleRene, Teapot et NeoJSON sont épinglés sur un commit précis. Si l'image en contient déjà une autre version (NeoJSON chargé par un autre projet, par exemple), Metacello lève sinon un `MetacelloConflictingProjectError` au lieu de choisir : cette ligne lui dit de prendre la version demandée par AXPL — la même règle que la CI (`.smalltalk.ston`).
 
 ## Versions
 
