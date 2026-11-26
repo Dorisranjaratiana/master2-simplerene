@@ -37,3 +37,12 @@ AXPLDescriptionExtensionTest >> testNiveauParDefaut [
     (valeur de repli dans SRDescription >> level, extension AXPL)."
     self assert: SRStringDescription new level equals: #simple.
 ]
+
+{ #category : 'tests' }
+AXPLDescriptionExtensionTest >> testMessageDeValidationDeSimpleRene [
+    | age |
+    age := container children detect: [ :d | d label = 'Âge' ].
+    self assert: (age validationMessageFor: 42) isNil.
+    self assert: (age validationMessageFor: -5) notNil.
+    self assert: (age validationMessageFor: -5) asString notEmpty.
+]

@@ -91,3 +91,22 @@ AXPLSpecVisitorTest >> testUnElementParChampVisible [
     layout := (self visitorAt: #base) visit: visible.
     self assert: layout presenters size equals: visible size.
 ]
+
+{ #category : 'tests' }
+AXPLSpecVisitorTest >> testSaisieRefuseeSignaleeSurLeChamp [
+    "-5 dans l'Âge : refusé, signalé (⚠ + message en infobulle), l'objet
+    garde sa valeur ; une saisie corrigée efface le signalement."
+    | desc row label input |
+    desc := self descriptionLabelled: 'Âge'.
+    client age: 30.
+    row := (self visitorAt: #simple) visitNumberDescription: desc.
+    label := row presenters first.
+    input := row presenters last.
+    input number: -5.
+    self assert: client age equals: 30.
+    self assert: label label equals: '⚠ Âge *'.
+    self assert: label help equals: (desc validationMessageFor: -5) asString.
+    input number: 33.
+    self assert: client age equals: 33.
+    self assert: label label equals: 'Âge *'.
+]

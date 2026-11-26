@@ -32,7 +32,8 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'teapot',
-		'framework'
+		'framework',
+		'debugMode'
 	],
 	#category : 'AXPL-Web',
 	#package : 'AXPL-Web'
@@ -182,7 +183,7 @@ AXPLWebServer >> start: aPort [
 	teapot := Teapot configure: {
 		(#defaultOutput -> #json).
 		(#port -> aPort).
-		(#debugMode -> true) }.
+		(#debugMode -> self debugMode) }.
 	teapot
 		after: '*' -> [ :req :resp |
 			"Access-Control-Allow-Origin seul suffit pour une requête CORS
@@ -205,6 +206,20 @@ AXPLWebServer >> start: aPort [
 		POST: '/psi/remove-field' -> [ :req | self safely: [ self psiRemoveField: req ] ];
 		GET: '/psi/trace' -> [ :req | self safely: [ self traceJson ] ].
 	teapot start.
+]
+
+{ #category : 'accessing' }
+AXPLWebServer >> debugMode [
+	"Option du serveur Zinc sous-jacent. Faux par défaut : une erreur hors
+	de safely: renvoie une réponse 500 au lieu d'ouvrir le débogueur Pharo
+	et de laisser la requête bloquée. À activer (avant start:) seulement
+	pour déboguer en local."
+	^ debugMode ifNil: [ false ]
+]
+
+{ #category : 'accessing' }
+AXPLWebServer >> debugMode: aBoolean [
+	debugMode := aBoolean
 ]
 
 { #category : 'accessing' }
@@ -238,9 +253,10 @@ AXPLWebServer >> writeField: aRequest [
 		detect: [ :d | d label = (body at: #label) ]
 		ifNone: [ ^ Dictionary new at: #error put: 'Champ inconnu'; yourself ].
 	value := self coerceValue: (body at: #value) for: desc.
-	(desc isSatisfiedBy: value)
-		ifTrue: [
-			desc write: value to: framework targetObject.
-			^ self ok ]
-		ifFalse: [ ^ Dictionary new at: #error put: 'Valeur invalide'; yourself ]
+	(desc validationMessageFor: value) ifNotNil: [ :message |
+		"Le message de SimpleRene (requis, condition...) plutôt qu'un
+		'Valeur invalide' générique : le frontend peut l'afficher tel quel."
+		^ Dictionary new at: #error put: message asString; yourself ].
+	desc write: value to: framework targetObject.
+	^ self ok
 ]

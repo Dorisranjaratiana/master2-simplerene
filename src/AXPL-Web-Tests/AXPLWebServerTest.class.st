@@ -205,3 +205,24 @@ AXPLWebServerTest >> testFormJsonDonneLesChampsMasquesEtLeurNiveauRequis [
     self assert: (allergies at: #requiredLevel) equals: 'expert'.
     self assert: ((server formJsonFor: #expert) at: #hidden) isEmpty.
 ]
+
+{ #category : 'tests' }
+AXPLWebServerTest >> testDebugModeDesactiveParDefaut [
+    "Une erreur ne doit pas ouvrir le débogueur Pharo et bloquer la
+    requête d'un client web, sauf activation explicite pour déboguer."
+    | server |
+    server := AXPLWebServer new targetObject: client; yourself.
+    self deny: server debugMode.
+    server debugMode: true.
+    self assert: server debugMode.
+]
+
+{ #category : 'tests' }
+AXPLWebServerTest >> testWriteFieldRenvoieLeMessageDeSimpleRene [
+    | server request result age |
+    server := AXPLWebServer new targetObject: client; yourself.
+    request := AXPLFakeWebRequest withJson: '{"label":"Âge","value":-5}'.
+    result := server safely: [ server writeField: request ].
+    age := client class descriptionForAXPL children detect: [ :d | d label = 'Âge' ].
+    self assert: (result at: #error) equals: (age validationMessageFor: -5) asString.
+]

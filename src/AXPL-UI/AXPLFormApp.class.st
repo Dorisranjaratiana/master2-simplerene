@@ -22,7 +22,8 @@ Class {
 		'actionBar',
 		'psiButton',
 		'framework',
-		'traceButton'
+		'traceButton',
+		'pendingErrors'
 	],
 	#category : 'AXPL-UI',
 	#package : 'AXPL-UI'
@@ -351,6 +352,14 @@ AXPLFormApp >> save [
     targetObject au fil de la saisie (cf. AXPLSpecVisitor), cette étape ne
     fait que vérifier qu'elles sont toutes valides."
     | invalides |
+    self pendingErrors ifNotEmpty: [ :errors |
+        ^ self inform:
+            'Impossible d''enregistrer : ces champs affichent une saisie refusée'
+            , ' (l''objet garde l''ancienne valeur) :'
+            , String cr
+            , (errors associations
+                inject: ''
+                into: [ :acc :each | acc , '- ' , each key , ' : ' , each value asString , String cr ]) ].
     invalides := self invalidFields.
     invalides isEmpty
         ifTrue: [ self inform: 'Enregistré : toutes les valeurs sont valides.' ]
@@ -496,9 +505,10 @@ AXPLFormApp >> updateInterface [
     "① Filtrage adaptatif (A)"
     visibleDescs := framework visibleFieldsAt: level.
 
-    "Titre contextuel"
-    statusLabel label: levelDropList selectedItem asString capitalized
-        , ' Formulaire pour ' , targetObject class name.
+    "Titre contextuel ; les nouveaux widgets affichent les valeurs de
+    l'objet, donc aucune saisie refusée en attente."
+    pendingErrors := Dictionary new.
+    statusLabel label: self formTitle.
 
     "Ψ — réservé au niveau le plus privilégié"
     levelDropList selectedItem = AXPLFormBuilder mostPrivilegedLevel
@@ -518,6 +528,7 @@ AXPLFormApp >> updateInterface [
     "⑦ Génération widgets (L)"
     visitor := (AXPLSpecVisitor on: targetObject level: level)
         presenter: self;
+        whenValidationChangedDo: [ :desc :message | self validationOf: desc changedTo: message ];
         yourself.
     newLayout := visitor visit: visibleDescs.
 
@@ -550,4 +561,34 @@ AXPLFormApp >> updateInterface [
     bodyContainer layout: (self formBodyLayoutScrollable:
         (self desiredHeightFor: visibleDescs size hiddenButtonShown: hidden notEmpty)
             > self maxWindowHeight).
+]
+
+{ #category : 'updating' }
+AXPLFormApp >> formTitle [
+    ^ levelDropList selectedItem asString capitalized
+        , ' Formulaire pour ' , targetObject class name
+]
+
+{ #category : 'accessing' }
+AXPLFormApp >> pendingErrors [
+    "Champs dont l'écran montre une saisie refusée : label -> message de
+    SimpleRene. L'objet garde alors son ancienne valeur ; tant que ce
+    dictionnaire n'est pas vide, Enregistrer refuse."
+    ^ pendingErrors ifNil: [ pendingErrors := Dictionary new ]
+]
+
+{ #category : 'updating' }
+AXPLFormApp >> validationOf: aDescription changedTo: messageOrNil [
+    "Appelé par le visiteur à chaque saisie : le message de SimpleRene
+    s'affiche en haut de la fenêtre (le champ porte déjà ⚠) ; une saisie
+    corrigée retire l'erreur."
+    messageOrNil
+        ifNil: [ self pendingErrors removeKey: aDescription label ifAbsent: [ ] ]
+        ifNotNil: [ self pendingErrors at: aDescription label put: messageOrNil ].
+    statusLabel label: (messageOrNil
+        ifNil: [
+            self pendingErrors
+                ifEmpty: [ self formTitle ]
+                ifNotEmpty: [ :errors | '⚠ ' , errors size printString , ' saisie(s) refusée(s)' ] ]
+        ifNotNil: [ '⚠ ' , aDescription label , ' : ' , messageOrNil asString ])
 ]

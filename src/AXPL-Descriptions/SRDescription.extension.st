@@ -34,3 +34,17 @@ SRDescription >> level [
 SRDescription >> level: aSymbol [
 	self propertyAt: #axplLevel put: aSymbol
 ]
+
+{ #category : '*AXPL-Descriptions' }
+SRDescription >> validationMessageFor: anObject [
+	"nil si anObject respecte les règles de la description (requis, type,
+	conditions comme bePositive ou addCondition:labelled:), sinon le
+	message d'erreur de SimpleRene — pour l'afficher à l'utilisateur au
+	lieu de refuser la saisie en silence (isSatisfiedBy: ne dit que
+	true/false)."
+
+	[ self validate: anObject ]
+		on: SRValidationError
+		do: [ :err | ^ err messageText ].
+	^ nil
+]

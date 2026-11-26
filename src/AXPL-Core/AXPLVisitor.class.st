@@ -18,7 +18,8 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'targetObject',
-		'level'
+		'level',
+		'validationHandler'
 	],
 	#category : 'AXPL-Core',
 	#package : 'AXPL-Core'
@@ -117,4 +118,31 @@ AXPLVisitor >> visitSingleOptionDescription: aDescription [
 { #category : 'visiting' }
 AXPLVisitor >> visitStringDescription: aDescription [
 	^ self subclassResponsibility
+]
+
+{ #category : 'writing' }
+AXPLVisitor >> commit: aValue for: aDescription [
+	"Passage unique de toute saisie vers l'objet métier, quel que soit le
+	type de champ : on n'écrit que ce que les règles de la description
+	acceptent, et on prévient toujours (validationHandler) — message
+	d'erreur ou nil — pour que l'interface puisse l'afficher. Avant,
+	seuls texte et nombre étaient validés, et un refus était silencieux :
+	l'écran montrait une valeur que l'objet n'avait pas."
+	| message |
+	message := aDescription validationMessageFor: aValue.
+	message ifNil: [ aDescription write: aValue to: targetObject ].
+	self validationHandler value: aDescription value: message.
+	^ message
+]
+
+{ #category : 'accessing' }
+AXPLVisitor >> validationHandler [
+	^ validationHandler ifNil: [ [ :description :messageOrNil | ] ]
+]
+
+{ #category : 'accessing' }
+AXPLVisitor >> whenValidationChangedDo: aBlock [
+	"aBlock reçoit la description et le message d'erreur (nil si la
+	saisie est valide et a été écrite)."
+	validationHandler := aBlock
 ]

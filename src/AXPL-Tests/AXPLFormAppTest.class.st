@@ -180,3 +180,18 @@ AXPLFormAppTest >> testZoneDefilanteSeulementSiLeFormulaireDepasseLEcran [
     self assert: ((app formBodyLayoutScrollable: false) presenters includes: app formContainer).
     self deny: ((app formBodyLayoutScrollable: true) presenters includes: app formContainer).
 ]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testSaisieRefuseeBloqueLEnregistrement [
+    "L'écran ne doit pas pouvoir être enregistré tant qu'il affiche une
+    valeur que l'objet n'a pas."
+    | ageInput |
+    app levelDropList selectItem: #simple.
+    ageInput := (app formContainer layout presenters at: 3) presenters last.
+    ageInput number: -5.
+    self assert: (app pendingErrors includesKey: 'Âge').
+    self assert: (app statusLabel label includesSubstring: '⚠').
+    ageInput number: 30.
+    self assert: app pendingErrors isEmpty.
+    self assert: app statusLabel label equals: app formTitle.
+]

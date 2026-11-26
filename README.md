@@ -192,12 +192,14 @@ Charger d'abord le groupe `web` (voir plus haut) — `AXPL-Web` n'est pas charg�
 AXPLWebServer onPort: 8080 forTargetObject: ClientHopital new.
 ```
 
+Le mode débogage de Zinc est désactivé par défaut (une erreur renvoie une réponse 500 au lieu d'ouvrir le débogueur Pharo et de bloquer la requête). Pour déboguer en local : `AXPLWebServer new targetObject: ClientHopital new; debugMode: true; start: 8080`. Pour arrêter un serveur dont on a perdu la référence : `Teapot stopAll`.
+
 Routes disponibles (CORS ouvert, pratique pour un frontend en développement local sur un autre port — Vite, CRA...) :
 
 | Route | Description |
 |---|---|
 | `GET /form?level=simple\|base\|expert` | Champs visibles à ce niveau (`fields`), et champs masqués avec le niveau qui les débloque (`hidden: [{label, requiredLevel}]`) |
-| `POST /field` `{label, value}` | Écrit une valeur (validée avant écriture, comme le desktop) |
+| `POST /field` `{label, value}` | Écrit une valeur validée ; sinon `{error}` contient le message de SimpleRene (champ requis, condition non respectée…) |
 | `POST /psi/rename` `{oldLabel, newLabel}` | Ψ — renomme un champ |
 | `POST /psi/set-level` `{label, level}` | Ψ — change le niveau d'un champ |
 | `POST /psi/create-field` `{label, type, level, options?}` | Ψ — crée un champ (`type` : `string`/`number`/`boolean`/`date`/`select`) |

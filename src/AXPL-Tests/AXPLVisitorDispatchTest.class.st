@@ -94,3 +94,26 @@ AXPLVisitorDispatchTest >> testTypeNonSupporteRefuseClairement [
     } do: [ :desc |
         self should: [ desc acceptAXPLVisitor: visitor ] raise: Error ].
 ]
+
+{ #category : 'tests' }
+AXPLVisitorDispatchTest >> testCommitNEcritQueLesSaisiesValidesEtPrevientToujours [
+    "Régression : une saisie refusée l'était en silence, et seuls texte et
+    nombre étaient validés avant écriture."
+    | visitor messages age admission dateAvant |
+    visitor := AXPLJsonVisitor on: client level: #simple.
+    messages := OrderedCollection new.
+    visitor whenValidationChangedDo: [ :desc :message | messages add: message ].
+    age := container children detect: [ :d | d label = 'Âge' ].
+    client age: 30.
+    self assert: (visitor commit: -5 for: age) notNil.
+    self assert: client age equals: 30.
+    self assert: (visitor commit: 40 for: age) isNil.
+    self assert: client age equals: 40.
+    admission := container children detect: [ :d | d label = 'Date d''Admission' ].
+    dateAvant := client dateAdmission.
+    self assert: (visitor commit: 'pas une date' for: admission) notNil.
+    self assert: client dateAdmission equals: dateAvant.
+    self assert: messages size equals: 3.
+    self assert: messages first notNil.
+    self assert: messages second isNil.
+]

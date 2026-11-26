@@ -56,8 +56,10 @@ AXPLSpecVisitor >> visitBooleanDescription: aDesc [
     checkbox help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
     
     checkbox state: (aDesc read: targetObject).
-    checkbox whenActivatedDo: [ aDesc write: true to: targetObject ].
-    checkbox whenDeactivatedDo: [ aDesc write: false to: targetObject ].
+    checkbox whenActivatedDo: [
+        self mark: checkbox for: aDesc with: (self commit: true for: aDesc) ].
+    checkbox whenDeactivatedDo: [
+        self mark: checkbox for: aDesc with: (self commit: false for: aDesc) ].
 
     ^ checkbox
 ]
@@ -72,11 +74,10 @@ AXPLSpecVisitor >> visitDateDescription: aDescription [
     input := SpDatePresenter new.
     dateValue := aDescription read: targetObject.
     input date: (dateValue ifNil: [ Date today ] ifNotNil: [ dateValue ]).
-    input whenDateChanged: [ :aDate |
-        aDescription write: aDate to: targetObject ].
-
     label := presenter newLabel label: (self labelTextFor: aDescription).
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
+    input whenDateChanged: [ :aDate |
+        self mark: label for: aDescription with: (self commit: aDate for: aDescription) ].
 
     ^ self withLabel: label for: input
 ]
@@ -92,12 +93,10 @@ AXPLSpecVisitor >> visitNumberDescription: aDescription [
     numValue := aDescription read: targetObject.
     input number: (numValue ifNil: [ 0 ]).
 
-    input whenNumberChangedDo: [ :num |
-        (aDescription isSatisfiedBy: num)
-            ifTrue: [ aDescription write: num to: targetObject ] ].
-
     label := presenter newLabel label: (self labelTextFor: aDescription).
     label help: (explicabilityText isString ifTrue: [ explicabilityText ] ifFalse: [ '' ]).
+    input whenNumberChangedDo: [ :num |
+        self mark: label for: aDescription with: (self commit: num for: aDescription) ].
 
     ^ self withLabel: label for: input
 ]
@@ -116,7 +115,7 @@ AXPLSpecVisitor >> visitSingleOptionDescription: aDesc [
     drop items: aDesc options.
     drop selectItem: (aDesc read: targetObject).
     drop whenSelectedItemChangedDo: [ :item |
-        aDesc write: item to: targetObject ].
+        self mark: label for: aDesc with: (self commit: item for: aDesc) ].
 
     row := SpBoxLayout newHorizontal spacing: 15.
     row add: label width: 140.
@@ -149,8 +148,7 @@ AXPLSpecVisitor >> textRowFor: aDesc password: isPassword [
     value := aDesc read: targetObject.
     input text: (value ifNil: [ '' ] ifNotNil: [ value asString ]).
     input whenTextChangedDo: [ :txt |
-        (aDesc isSatisfiedBy: txt)
-            ifTrue: [ aDesc write: txt to: targetObject ] ].
+        self mark: label for: aDesc with: (self commit: txt for: aDesc) ].
 
     row := SpBoxLayout newHorizontal spacing: 15.
     row add: label width: 140.
@@ -172,4 +170,20 @@ AXPLSpecVisitor >> withLabel: aLabel for: aWidget [
     row add: labelPresenter width: 140.
     row add: aWidget expand: true.
     ^ row
+]
+
+{ #category : 'private' }
+AXPLSpecVisitor >> mark: aLabelledPresenter for: aDescription with: messageOrNil [
+    "Signale une saisie refusée sur le champ lui-même : ⚠ devant le label,
+    et le message de SimpleRene en infobulle à la place de l'explication
+    ②. Une saisie valide rétablit label et explication."
+    | explanation |
+    explanation := aDescription commentFor: level.
+    messageOrNil
+        ifNil: [
+            aLabelledPresenter label: (self labelTextFor: aDescription).
+            aLabelledPresenter help: (explanation isString ifTrue: [ explanation ] ifFalse: [ '' ]) ]
+        ifNotNil: [
+            aLabelledPresenter label: '⚠ ' , (self labelTextFor: aDescription).
+            aLabelledPresenter help: messageOrNil asString ]
 ]
