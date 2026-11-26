@@ -241,3 +241,43 @@ AXPLFormAppTest >> testAnnulerLaDerniereModificationPsiDepuisLaFenetre [
     self assert: annule equals: 'Création : Note interne'.
     self assert: app formContainer layout presenters size equals: attendu.
 ]
+
+{ #category : 'tests - dossiers' }
+AXPLFormAppTest >> testEnregistrerPuisOuvrirUnDossier [
+    app dossiersDirectory: FileSystem memory / 'dossiers'.
+    client nom: 'Ranjaratiana'.
+    app psiEngine createField: 'Note interne' type: SRStringDescription level: #simple.
+    app saveDossierAs: 'patient1'.
+    self assert: app dossierNames equals: #('patient1').
+    app resetInterface.
+    self assert: app targetObject nom equals: ''.
+    app levelDropList selectItem: #simple.
+    app openDossier: 'patient1'.
+    self assert: app targetObject nom equals: 'Ranjaratiana'.
+    self assert: (app psiEngine readDescription: 'Note interne') notNil.
+    self assert: app currentDossierName equals: 'patient1'.
+    "Le formulaire du niveau courant est redessiné avec le champ Ψ."
+    self
+        assert: app formContainer layout presenters size
+        equals: (app framework visibleFieldsAt: #simple) size + 1.
+    self assert: (app statusLabel label includesSubstring: 'patient1').
+]
+
+{ #category : 'tests - dossiers' }
+AXPLFormAppTest >> testOuvrirSansNiveauResteSurLEcranNeutre [
+    app dossiersDirectory: FileSystem memory / 'dossiers'.
+    app saveDossierAs: 'vide'.
+    app openDossier: 'vide'.
+    self assert: app levelDropList selectedItem isNil.
+    self assert: app formContainer layout presenters isEmpty.
+    self assert: (app statusLabel label includesSubstring: 'vide').
+]
+
+{ #category : 'tests - dossiers' }
+AXPLFormAppTest >> testNomDeDossierInvalideRefuse [
+    "Un nom de dossier n'est jamais un chemin."
+    app dossiersDirectory: FileSystem memory / 'dossiers'.
+    self should: [ app saveDossierAs: '../ailleurs' ] raise: Error.
+    self should: [ app saveDossierAs: '   ' ] raise: Error.
+    self assert: app dossierNames isEmpty.
+]

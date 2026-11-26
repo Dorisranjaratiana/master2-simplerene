@@ -17,6 +17,10 @@ LIFO undoLog). Chaque intercession y range, avec le texte de sa trace, le
 bloc qui la défait sur l'objet description lui-même — pas sur son label,
 qui a pu changer depuis. Annuler dans l'ordre inverse remet exactement
 l'état antérieur. L'annulation est elle-même tracée (« Annulation : … »).
+💾 changes / replayChanges: — chaque intercession encore active est aussi
+décrite en DONNÉES (un Dictionary : #op, #label...), sans bloc : c'est ce
+que la sauvegarde STON enregistre, et ce qu'elle rejoue sur un
+metaContainer neuf pour retrouver le formulaire modifié.
 Instance unique créée dans targetObject: — jamais recréée entre les re-rendus.""
 "
 Class {
@@ -140,7 +144,17 @@ AXPLReflexivityEngine >> register: aDescription labelled: aLabel level: aLevel e
     metaContainer add: aDescription.
     self
         record: 'Création : ' , aLabel
-        undo: [ metaContainer remove: aDescription ].
+        undo: [ metaContainer remove: aDescription ]
+        as: (Dictionary new
+            at: #op put: #create;
+            at: #label put: aLabel;
+            at: #type put: aDescription class name;
+            at: #level put: aLevel;
+            at: #explanation put: aTextOrNil;
+            at: #options put: ((aDescription isKindOf: SRSingleOptionDescription)
+                ifTrue: [ aDescription options asArray ]
+                ifFalse: [ nil ]);
+            yourself).
     ^ aDescription
 ]
 
@@ -171,7 +185,8 @@ AXPLReflexivityEngine >> removeField: aLabel [
         place, son accessor (donc sa valeur) et ses explications."
         self
             record: 'Suppression : ' , aLabel
-            undo: [ metaContainer add: desc ] ].
+            undo: [ metaContainer add: desc ]
+            as: (Dictionary new at: #op put: #remove; at: #label put: aLabel; yourself) ].
 ]
 
 { #category : 'accessing' }
@@ -200,7 +215,8 @@ AXPLReflexivityEngine >> relabelDescription: oldLabel to: newLabel [
     desc label: newLabel.
     self
         record: 'Rename: ' , oldLabel , ' → ' , newLabel
-        undo: [ desc label: oldLabel ].
+        undo: [ desc label: oldLabel ]
+        as: (Dictionary new at: #op put: #relabel; at: #from put: oldLabel; at: #to put: newLabel; yourself).
 ]
 
 { #category : 'intercession' }
@@ -214,7 +230,8 @@ AXPLReflexivityEngine >> setLevel: aNewLevel ofDescription: aLabel [
     desc level: aNewLevel.
     self
         record: 'Level: ' , aLabel , ' → ' , aNewLevel asString
-        undo: [ desc level: oldLevel ].
+        undo: [ desc level: oldLevel ]
+        as: (Dictionary new at: #op put: #level; at: #label put: aLabel; at: #level put: aNewLevel; yourself).
 ]
 
 { #category : 'accessing' }
@@ -235,7 +252,8 @@ AXPLReflexivityEngine >> updateExplanation: aLabel forLevel: aLevel with: aText 
     self
         changeExplanationOf: desc
         by: [ (self explanationDictionaryOf: desc) at: aLevel put: aText ]
-        tracing: 'Explication : ' , aLabel , ' [' , aLevel asString , ']'.
+        tracing: 'Explication : ' , aLabel , ' [' , aLevel asString , ']'
+        as: (Dictionary new at: #op put: #explain; at: #label put: aLabel; at: #level put: aLevel; at: #text put: aText; yourself).
 ]
 
 { #category : 'intercession' }
@@ -247,26 +265,27 @@ AXPLReflexivityEngine >> updateExplanation: aLabel with: aText [
     self
         changeExplanationOf: desc
         by: [ desc comment: aText ]
-        tracing: 'Explication : ' , aLabel , ' [tous niveaux]'.
+        tracing: 'Explication : ' , aLabel , ' [tous niveaux]'
+        as: (Dictionary new at: #op put: #explain; at: #label put: aLabel; at: #level put: nil; at: #text put: aText; yourself).
 ]
 
 { #category : 'private' }
-AXPLReflexivityEngine >> changeExplanationOf: aDescription by: aBlock tracing: aText [
+AXPLReflexivityEngine >> changeExplanationOf: aDescription by: aBlock tracing: aText as: aChange [
     "Le Dictionary des explications est modifié EN PLACE : on garde une
     copie de l'ancien comment (nil, String ou Dictionary) pour pouvoir le
     remettre tel quel."
     | oldComment |
     oldComment := aDescription comment copy.
     aBlock value.
-    self record: aText undo: [ aDescription comment: oldComment ]
+    self record: aText undo: [ aDescription comment: oldComment ] as: aChange
 ]
 
 { #category : 'private' }
-AXPLReflexivityEngine >> record: aText undo: anUndoBlock [
-    "[t] + ↶ : toute intercession passe par ici — trace horodatée et
-    moyen de la défaire."
+AXPLReflexivityEngine >> record: aText undo: anUndoBlock as: aChange [
+    "[t] + ↶ + 💾 : toute intercession passe par ici — trace horodatée,
+    moyen de la défaire, et sa description en données pour la sauvegarde."
     traceLog add: (Association key: DateAndTime now value: aText).
-    undoLog add: (Association key: aText value: anUndoBlock)
+    undoLog add: { aText. anUndoBlock. aChange }
 ]
 
 { #category : 'undo' }
@@ -278,7 +297,7 @@ AXPLReflexivityEngine >> canUndo [
 AXPLReflexivityEngine >> lastUndoableChange [
     "Texte de l'intercession qu'undoLast annulerait (nil s'il n'y en a pas),
     pour la montrer à l'utilisateur avant de confirmer."
-    ^ undoLog ifEmpty: [ nil ] ifNotEmpty: [ undoLog last key ]
+    ^ undoLog ifEmpty: [ nil ] ifNotEmpty: [ undoLog last first ]
 ]
 
 { #category : 'undo' }
@@ -289,7 +308,68 @@ AXPLReflexivityEngine >> undoLast [
     | change |
     undoLog ifEmpty: [ ^ Error signal: 'Aucune modification Ψ à annuler.' ].
     change := undoLog removeLast.
-    change value value.
-    traceLog add: (Association key: DateAndTime now value: 'Annulation : ' , change key).
-    ^ change key
+    change second value.
+    traceLog add: (Association key: DateAndTime now value: 'Annulation : ' , change first).
+    ^ change first
+]
+
+{ #category : 'persistence' }
+AXPLReflexivityEngine >> changes [
+    "💾 Les intercessions encore actives (les annulées n'y sont plus), dans
+    l'ordre, en données pures — sérialisables en STON."
+    ^ (undoLog collect: [ :each | each third copy ]) asArray
+]
+
+{ #category : 'persistence' }
+AXPLReflexivityEngine >> replayChanges: aCollection [
+    "💾 Rejoue des intercessions sauvegardées par #changes, dans l'ordre,
+    par les mêmes méthodes publiques — mêmes vérifications (niveau connu,
+    label libre), même trace, et elles restent annulables."
+    aCollection do: [ :each | self replayChange: each ]
+]
+
+{ #category : 'persistence' }
+AXPLReflexivityEngine >> replayChange: aChange [
+    | op |
+    op := aChange at: #op.
+    op = #create ifTrue: [ ^ self replayCreation: aChange ].
+    op = #remove ifTrue: [ ^ self removeField: (aChange at: #label) ].
+    op = #relabel ifTrue: [ ^ self relabelDescription: (aChange at: #from) to: (aChange at: #to) ].
+    op = #level ifTrue: [ ^ self setLevel: (aChange at: #level) ofDescription: (aChange at: #label) ].
+    op = #explain ifTrue: [
+        ^ (aChange at: #level)
+            ifNil: [ self updateExplanation: (aChange at: #label) with: (aChange at: #text) ]
+            ifNotNil: [ :lvl | self updateExplanation: (aChange at: #label) forLevel: lvl with: (aChange at: #text) ] ].
+    Error signal: 'Modification Ψ inconnue : ' , op printString
+]
+
+{ #category : 'persistence' }
+AXPLReflexivityEngine >> replayCreation: aChange [
+    "Le type vient d'un fichier : on n'instancie qu'une vraie classe de
+    description SimpleRene, jamais une classe quelconque nommée dedans."
+    | type |
+    type := Smalltalk globals at: (aChange at: #type) asSymbol ifAbsent: [ nil ].
+    (type isClass and: [ type inheritsFrom: SRDescription ]) ifFalse: [
+        Error signal: 'Type de champ inconnu : ' , (aChange at: #type) printString ].
+    ^ (aChange at: #options)
+        ifNil: [
+            self
+                createField: (aChange at: #label)
+                type: type
+                level: (aChange at: #level)
+                explanation: (aChange at: #explanation) ]
+        ifNotNil: [ :options |
+            self
+                createSelectionField: (aChange at: #label)
+                options: options
+                level: (aChange at: #level)
+                explanation: (aChange at: #explanation) ]
+]
+
+{ #category : 'persistence' }
+AXPLReflexivityEngine >> restoreTrace: aCollectionOfPairs [
+    "💾 Remet l'historique sauvegardé ({horodatage. texte}) à la place des
+    entrées produites par le rejeu : la trace reste celle d'origine."
+    traceLog := (aCollectionOfPairs collect: [ :pair |
+        Association key: pair first value: pair second ]) asOrderedCollection
 ]

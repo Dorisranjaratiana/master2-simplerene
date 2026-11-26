@@ -7,6 +7,8 @@ Slots principaux :
   - psiButton : bouton Ψ visible seulement au niveau le plus privilégié —
     ouvre runPsiMenu (créer ⑥ / modifier ④⑨ / supprimer ⑥ un champ)
   - traceButton : affiche le log horodaté [t] au niveau le plus privilégié
+  - openButton / Enregistrer : 💾 dossiers STON (objet + modifications Ψ)
+    rangés dans dossiersDirectory (par défaut <image>/axpl-dossiers)
 updateInterface : méthode centrale qui orchestre ①②⑦⑧⑨⑩.
 targetObject: : point d'entrée — crée la façade puis déclenche le rendu.""
 "
@@ -23,7 +25,10 @@ Class {
 		'psiButton',
 		'framework',
 		'traceButton',
-		'pendingErrors'
+		'pendingErrors',
+		'openButton',
+		'dossiersDirectory',
+		'currentDossierName'
 	],
 	#category : 'AXPL-UI',
 	#package : 'AXPL-UI'
@@ -62,6 +67,7 @@ AXPLFormApp >> defaultLayout [
             spacing: 8;
             add: (self newLabel label: 'Niveau:') expand: false;
             add: levelDropList expand: true;
+            add: openButton expand: false;
             yourself) expand: false;
         add: bodyContainer expand: true;
         yourself
@@ -127,6 +133,12 @@ AXPLFormApp >> initializePresenters [
     bodyContainer := self newPresenter.
     bodyContainer layout: SpBoxLayout newVertical.
     psiButton := self newButton label: ''; yourself.
+    openButton := self newButton
+        label: 'Ouvrir…';
+        icon: (self iconNamed: #open);
+        help: 'Ouvrir un dossier enregistré (valeurs et modifications Ψ)';
+        action: [ self runOpenDossier ];
+        yourself.
     traceButton := self newButton
         label: 'Trace Ψ';
         icon: (self iconNamed: #smallInfo);
@@ -173,6 +185,11 @@ AXPLFormApp >> levelDropList: anObject [
 ]
 
 { #category : 'accessing' }
+AXPLFormApp >> framework [
+	^ framework
+]
+
+{ #category : 'accessing' }
 AXPLFormApp >> metaContainer [
 	^ framework metaContainer
 ]
@@ -204,6 +221,7 @@ AXPLFormApp >> resetInterface [
     ou Expert, ce changement de sélection relançait le rendu de Simple dans
     une fenêtre déjà réduite (champs écrasés, barres de défilement)."
     self targetObject: targetObject class new.
+    currentDossierName := nil.
     levelDropList resetSelection.
     self showNeutralState.
 ]
@@ -449,9 +467,9 @@ AXPLFormApp >> runPsiSelectFieldThenDo: aBlock [
 AXPLFormApp >> save [
     "Valide chaque champ du metaContainer (règles réelles de SimpleRene :
     beRequired, bePositive, conditions personnalisées...) avant de confirmer
-    l'enregistrement. N'écrit rien de nouveau : les valeurs sont déjà sur
-    targetObject au fil de la saisie (cf. AXPLSpecVisitor), cette étape ne
-    fait que vérifier qu'elles sont toutes valides."
+    l'enregistrement. Les valeurs sont déjà sur targetObject au fil de la
+    saisie (cf. AXPLSpecVisitor) ; si toutes sont valides, le dossier
+    (valeurs + modifications Ψ) est écrit dans un fichier STON."
     | invalides |
     self pendingErrors ifNotEmpty: [ :errors |
         ^ self inform:
@@ -463,7 +481,7 @@ AXPLFormApp >> save [
                 into: [ :acc :each | acc , '- ' , each key , ' : ' , each value asString , String cr ]) ].
     invalides := self invalidFields.
     invalides isEmpty
-        ifTrue: [ self inform: 'Enregistré : toutes les valeurs sont valides.' ]
+        ifTrue: [ self runSaveDossier ]
         ifFalse: [
             self inform:
                 'Impossible d''enregistrer, champs invalides :'
@@ -668,6 +686,7 @@ AXPLFormApp >> updateInterface [
 AXPLFormApp >> formTitle [
     ^ levelDropList selectedItem asString capitalized
         , ' Formulaire pour ' , targetObject class name
+        , (currentDossierName ifNil: [ '' ] ifNotNil: [ :name | ' — ' , name ])
 ]
 
 { #category : 'accessing' }
@@ -694,4 +713,93 @@ AXPLFormApp >> validationOf: aDescription changedTo: messageOrNil [
                 ifEmpty: [ self formTitle ]
                 ifNotEmpty: [ :errors | '⚠ ' , errors size printString , ' saisie(s) refusée(s)' ] ]
         ifNotNil: [ '⚠ ' , aDescription label , ' : saisie refusée — survolez le champ' ])
+]
+
+{ #category : 'dossiers' }
+AXPLFormApp >> dossiersDirectory [
+    "💾 Où sont rangés les dossiers ; modifiable (tests : système de
+    fichiers en mémoire)."
+    ^ dossiersDirectory ifNil: [ FileLocator imageDirectory asFileReference / 'axpl-dossiers' ]
+]
+
+{ #category : 'dossiers' }
+AXPLFormApp >> dossiersDirectory: aFileReference [
+    dossiersDirectory := aFileReference asFileReference
+]
+
+{ #category : 'dossiers' }
+AXPLFormApp >> currentDossierName [
+    ^ currentDossierName
+]
+
+{ #category : 'dossiers' }
+AXPLFormApp >> dossierNames [
+    "Noms des dossiers enregistrés, triés."
+    self dossiersDirectory exists ifFalse: [ ^ #() ].
+    ^ ((self dossiersDirectory files select: [ :f | f extension = 'ston' ])
+        collect: [ :f | f basenameWithoutExtension ]) asSortedCollection asArray
+]
+
+{ #category : 'dossiers' }
+AXPLFormApp >> dossierFileNamed: aName [
+    "Un nom simple, jamais un chemin : le dossier reste dans dossiersDirectory."
+    | name |
+    name := aName trimBoth.
+    (name isEmpty or: [ name includesAny: '/\:' ]) ifTrue: [
+        Error signal: 'Nom de dossier invalide : « ' , aName , ' » (pas de / \ : ni nom vide).' ].
+    ^ self dossiersDirectory / (name , '.ston')
+]
+
+{ #category : 'dossiers' }
+AXPLFormApp >> saveDossierAs: aName [
+    "💾 Écrit le dossier courant et s'en souvient comme dossier ouvert."
+    | file |
+    file := framework saveTo: (self dossierFileNamed: aName).
+    currentDossierName := file basenameWithoutExtension.
+    ^ file
+]
+
+{ #category : 'dossiers' }
+AXPLFormApp >> openDossier: aName [
+    "💾 Remplace l'objet et le formulaire par ceux du dossier ; le niveau
+    choisi est conservé et le formulaire redessiné."
+    | loaded |
+    loaded := AXPLFramework loadFrom: (self dossierFileNamed: aName).
+    framework := loaded.
+    targetObject := loaded targetObject.
+    currentDossierName := aName trimBoth.
+    levelDropList selectedItem
+        ifNil: [ statusLabel label: 'Dossier « ' , currentDossierName , ' » ouvert — choisissez un niveau.' ]
+        ifNotNil: [ self updateInterface ]
+]
+
+{ #category : 'dossiers' }
+AXPLFormApp >> runSaveDossier [
+    | name file |
+    name := UIManager default
+        request: 'Enregistrer le dossier sous le nom :'
+        initialAnswer: (currentDossierName ifNil: [ targetObject class name asString ]).
+    (name isNil or: [ name trimBoth isEmpty ]) ifTrue: [ ^ self ].
+    ((self dossierNames includes: name trimBoth) and: [ name trimBoth ~= currentDossierName ])
+        ifTrue: [
+            (UIManager default confirm: 'Le dossier « ' , name trimBoth , ' » existe déjà. Le remplacer ?')
+                ifFalse: [ ^ self ] ].
+    file := [ self saveDossierAs: name ]
+        on: Error
+        do: [ :err | ^ self inform: 'Enregistrement impossible : ' , err messageText ].
+    self inform: 'Enregistré : toutes les valeurs sont valides.' , String cr , file fullName
+]
+
+{ #category : 'dossiers' }
+AXPLFormApp >> runOpenDossier [
+    | names index |
+    names := self dossierNames.
+    names ifEmpty: [
+        ^ self inform: 'Aucun dossier enregistré dans :' , String cr , self dossiersDirectory fullName ].
+    index := UIManager default chooseFrom: names title: 'Ouvrir un dossier'.
+    (index isNil or: [ index = 0 ]) ifTrue: [ ^ self ].
+    [ self openDossier: (names at: index) ]
+        on: Error
+        do: [ :err | ^ self inform: 'Ouverture impossible : ' , err messageText ].
+    self inform: 'Dossier « ' , (names at: index) , ' » ouvert.'
 ]

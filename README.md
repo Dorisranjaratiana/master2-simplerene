@@ -34,8 +34,9 @@ Metacello new
 **En développement** (branche `integration-simplerene`, après v1.0.0) :
 - Ψ ② : un champ créé par Ψ reçoit son explication dès la création (facultative) ; *Ψ → Modifier un champ → Modifier l'explication* change l'aide d'un champ, pour un niveau ou pour tous, sans effacer celle des autres niveaux ; chaque changement d'explication est tracé
 - Ψ ↶ : *Ψ → Annuler la dernière modification Ψ* défait les intercessions une à une, de la plus récente à la plus ancienne (création, suppression — le champ revient à sa place avec sa valeur et ses explications —, renommage, niveau, explication) ; l'annulation est tracée
+- 💾 sauvegarde STON : *Enregistrer* écrit le dossier (valeurs + modifications Ψ + trace) dans un fichier lisible, *Ouvrir…* le recharge ; les modifications Ψ sont rejouées sur un formulaire neuf et restent annulables ; les mots de passe ne sont jamais écrits ; une valeur invalide dans le fichier n'est pas réécrite
 - web : `explanation` facultatif dans `POST /psi/create-field`, nouvelles routes `POST /psi/explain` et `POST /psi/undo`
-- 118 tests
+- 136 tests
 
 **v1.0.0** — première version stable :
 - dépendance réelle à SimpleRene (extensions, jamais de réimplémentation), Teapot et NeoJSON — toutes épinglées sur un commit
@@ -82,7 +83,11 @@ framework psiEngine updateExplanation: 'Nom' forLevel: #expert with: 'Nom d''ét
 framework psiEngine updateExplanation: 'Nom' with: 'Nom de famille.'.    "② tous les niveaux"
 framework psiEngine lastUndoableChange.    "'Explication : Nom [tous niveaux]'"
 framework psiEngine undoLast.    "↶ défait la dernière intercession (canUndo pour savoir s'il en reste)"
+framework saveTo: 'patient.ston'.    "💾 valeurs + modifications Ψ + trace, en STON"
+framework := AXPLFramework loadFrom: 'patient.ston'.    "💾 objet et formulaire retrouvés"
 ```
+
+Dans `AXPLFormApp`, *Enregistrer* (si toutes les valeurs sont valides) et *Ouvrir…* utilisent le dossier `axpl-dossiers` à côté de l'image Pharo.
 
 Tous les visiteurs se construisent de la même façon, avec l'objet métier et le niveau — le visiteur Spec2 demande en plus un presenter pour ses widgets :
 

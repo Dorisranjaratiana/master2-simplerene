@@ -13,7 +13,15 @@ visiteurs se créent par AXPLVisitor class >> on:level:, mais chaque cible
 peut demander en plus ce qui lui est propre (AXPLSpecVisitor : un
 presenter Spec2 pour ses fabriques de widgets). La façade s'arrête donc
 à visibleFieldsAt:, qui renvoie une Collection de descriptions prête à
-être passée à visit: sur n'importe quel AXPLVisitor concret.""
+être passée à visit: sur n'importe quel AXPLVisitor concret.
+
+💾 Sauvegarde STON (saveTo: / loadFrom:, stonString / fromStonString:) :
+un dossier = la classe de l'objet, ses valeurs lues PAR LES DESCRIPTIONS
+(label → valeur ; les mots de passe ne sont jamais écrits en clair), les
+modifications Ψ actives (psiEngine changes) et la trace. Au chargement,
+les modifications Ψ sont rejouées sur un metaContainer neuf, puis chaque
+valeur est réécrite par sa description — seulement si elle est valide.
+Aucun bloc n'est sérialisé : le fichier reste lisible et modifiable à la main.""
 "
 Class {
 	#name : 'AXPLFramework',
@@ -82,4 +90,86 @@ AXPLFramework >> visibleFieldsAt: aLevelSymbol [
 	être passée à visit: sur n'importe quel AXPLVisitor concret (Spec2,
 	JSON, ou un futur visiteur)."
 	^ (self builderAt: aLevelSymbol) build
+]
+
+{ #category : 'persistence' }
+AXPLFramework class >> formatVersion [
+	^ 1
+]
+
+{ #category : 'persistence' }
+AXPLFramework class >> fromStonString: aString [
+	"💾 Reconstruit une façade (objet + formulaire modifié par Ψ) depuis
+	une sauvegarde produite par #stonString."
+	| data class framework |
+	data := [ STON fromString: aString ]
+		on: Error
+		do: [ :err | Error signal: 'Fichier illisible : ' , err messageText ].
+	((data isKindOf: Dictionary) and: [ (data at: #format ifAbsent: [ nil ]) = 'AXPL' ])
+		ifFalse: [ Error signal: 'Ce fichier n''est pas une sauvegarde AXPL.' ].
+	(data at: #version ifAbsent: [ nil ]) = self formatVersion
+		ifFalse: [ Error signal: 'Version de sauvegarde non prise en charge : '
+			, (data at: #version ifAbsent: [ nil ]) printString ].
+	class := Smalltalk globals at: (data at: #class) asSymbol ifAbsent: [ nil ].
+	(class isClass and: [ class respondsTo: #descriptionForAXPL ])
+		ifFalse: [ Error signal: 'Classe inconnue ou sans descriptionForAXPL : '
+			, (data at: #class) printString ].
+	framework := self for: class new.
+	framework restoreFrom: data.
+	^ framework
+]
+
+{ #category : 'persistence' }
+AXPLFramework class >> loadFrom: aFileReference [
+	^ self fromStonString: aFileReference asFileReference contents
+]
+
+{ #category : 'persistence' }
+AXPLFramework >> restoreFrom: aDictionary [
+	psiEngine replayChanges: (aDictionary at: #psi).
+	psiEngine restoreTrace: (aDictionary at: #trace).
+	(aDictionary at: #values) keysAndValuesDo: [ :label :value |
+		(psiEngine readDescription: label) ifNotNil: [ :desc |
+			(desc validationMessageFor: value) ifNil: [ desc write: value to: targetObject ] ] ]
+]
+
+{ #category : 'persistence' }
+AXPLFramework >> saveTo: aFileReference [
+	"💾 Écrit le dossier (remplace le fichier s'il existe)."
+	| file |
+	file := aFileReference asFileReference.
+	file parent ensureCreateDirectory.
+	file ensureDelete.
+	file writeStreamDo: [ :stream | stream nextPutAll: self stonString ].
+	^ file
+]
+
+{ #category : 'persistence' }
+AXPLFramework >> savedValues [
+	"label → valeur, pour chaque champ décrit ayant une valeur. Passer
+	par les descriptions (et pas par les variables d'instance) couvre
+	aussi les champs créés par Ψ, rangés dans #properties."
+	| values |
+	values := Dictionary new.
+	metaContainer children do: [ :desc |
+		(desc isKindOf: SRPasswordDescription) ifFalse: [
+			(desc read: targetObject) ifNotNil: [ :value | values at: desc label put: value ] ] ].
+	^ values
+]
+
+{ #category : 'persistence' }
+AXPLFramework >> snapshot [
+	^ Dictionary new
+		at: #format put: 'AXPL';
+		at: #version put: self class formatVersion;
+		at: #class put: targetObject class name;
+		at: #values put: self savedValues;
+		at: #psi put: psiEngine changes;
+		at: #trace put: (psiEngine traceLog collect: [ :each | { each key. each value } ]) asArray;
+		yourself
+]
+
+{ #category : 'persistence' }
+AXPLFramework >> stonString [
+	^ STON toStringPretty: self snapshot
 ]
