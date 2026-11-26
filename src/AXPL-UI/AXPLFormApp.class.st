@@ -15,7 +15,6 @@ Class {
 	#superclass : 'SpPresenter',
 	#instVars : [
 		'levelDropList',
-		'generateButton',
 		'formContainer',
 		'statusLabel',
 		'targetObject',
@@ -27,6 +26,17 @@ Class {
 	#category : 'AXPL-UI',
 	#package : 'AXPL-UI'
 }
+
+{ #category : 'accessing' }
+AXPLFormApp class >> neutralHeight [
+    "Écran neutre : statut + liste des niveaux, sans formulaire ni boutons."
+    ^ 130
+]
+
+{ #category : 'accessing' }
+AXPLFormApp class >> neutralMessage [
+    ^ 'Choisissez un niveau pour afficher le formulaire.'
+]
 
 { #category : 'accessing' }
 AXPLFormApp >> actionBar [
@@ -51,7 +61,6 @@ AXPLFormApp >> defaultLayout [
             add: (self newLabel label: 'Niveau:') expand: false;
             add: levelDropList expand: true;
             yourself) expand: false;
-        add: generateButton expand: false;
         add: (SpScrollableLayout with: formContainer) expand: true;
         add: actionBar expand: false;
         yourself
@@ -69,18 +78,6 @@ AXPLFormApp >> formContainer: anObject [
 	formContainer := anObject
 ]
 
-{ #category : 'accessing' }
-AXPLFormApp >> generateButton [
-
-	^ generateButton
-]
-
-{ #category : 'accessing' }
-AXPLFormApp >> generateButton: anObject [
-
-	generateButton := anObject
-]
-
 { #category : 'initialization' }
 AXPLFormApp >> initialize [
     super initialize.
@@ -89,15 +86,16 @@ AXPLFormApp >> initialize [
 
 { #category : 'initialization' }
 AXPLFormApp >> initializePresenters [
-    statusLabel := self newLabel label: 'Prêt'.
+    statusLabel := self newLabel label: self class neutralMessage.
+    "Aucun niveau sélectionné au départ (startWithoutSelection doit précéder
+    items:, sinon Spec2 sélectionne d'office le premier) : choisir un
+    niveau affiche directement son formulaire — d'où l'absence de bouton
+    Rafraîchir, devenu redondant."
     levelDropList := self newDropList
+        startWithoutSelection;
         items: AXPLFormBuilder levels;
         display: [ :item | item asString capitalized ];
         whenSelectedItemChangedDo: [ :item | self updateInterface ].
-    generateButton := self newButton
-        label: 'Rafraîchir';
-        icon: (self iconNamed: #refresh);
-        action: [ self updateInterface ].
     formContainer := self newPresenter.
     formContainer layout: SpBoxLayout newVertical.
     psiButton := self newButton label: ''; yourself.
@@ -132,7 +130,7 @@ AXPLFormApp >> initializeWindow: aWindowPresenter [
         title: (targetObject
             ifNil: [ 'Framework {A,X,Ψ,L}' ]
             ifNotNil: [ :obj | obj class name , ' — AXΨL' ]);
-        initialExtent: 500 @ 400. "resizeWindowFor:hiddenButtonShown: agrandit dès le premier rendu"
+        initialExtent: 500 @ self class neutralHeight.
 ]
 
 { #category : 'accessing' }
@@ -174,13 +172,22 @@ AXPLFormApp >> resetInterface [
     "Annule aussi les saisies : targetObject est remplacé par une instance
     fraîche, pas seulement le metaContainer (sinon les valeurs déjà tapées
     restaient malgré le clic sur Annuler)."
+    "Revient à l'écran neutre de départ : aucun niveau sélectionné, aucun
+    formulaire. Avant, Annuler remettait la liste sur Simple : depuis Base
+    ou Expert, ce changement de sélection relançait le rendu de Simple dans
+    une fenêtre déjà réduite (champs écrasés, barres de défilement)."
     self targetObject: targetObject class new.
+    levelDropList resetSelection.
+    self showNeutralState.
+]
+
+{ #category : 'updating' }
+AXPLFormApp >> showNeutralState [
     formContainer layout: SpBoxLayout newVertical.
-    statusLabel label: 'Sélectionnez un niveau et cliquez sur Rafraîchir.'.
-    levelDropList selectIndex: 1.
+    statusLabel label: self class neutralMessage.
     actionBar visible: false.
     self update.
-    self resizeWindowFor: 0 hiddenButtonShown: false.
+    self window ifNotNil: [ :w | w resize: 500 @ self class neutralHeight ].
 ]
 
 { #category : 'psi' }
@@ -424,12 +431,12 @@ AXPLFormApp >> resizeWindowFor: visibleFieldCount hiddenButtonShown: hasHiddenBu
 { #category : 'layout' }
 AXPLFormApp >> desiredHeightFor: visibleFieldCount hiddenButtonShown: hasHiddenButton [
     "33 = hauteur d'une ligne de champ (≈25) + espacement du visiteur (8) ;
-    190 = barre de titre, statut, niveau, Rafraîchir, barre d'actions,
+    155 = barre de titre, statut, niveau, barre d'actions,
     espacements et bordures — mesurés sur une vraie fenêtre. L'ancienne
     estimation (41 et 270) laissait un grand vide sous les champs."
     | rowCount |
     rowCount := visibleFieldCount + (hasHiddenButton ifTrue: [ 1 ] ifFalse: [ 0 ]).
-    ^ (rowCount * 33) + 190 max: 300
+    ^ (rowCount * 33) + 155 max: 300
 ]
 
 { #category : 'layout' }
@@ -459,6 +466,7 @@ AXPLFormApp >> updateInterface [
     | level visibleDescs hidden visitor newLayout |
     targetObject ifNil: [ ^ self ].
     level := levelDropList selectedItem.
+    level ifNil: [ ^ self showNeutralState ].
 
     "① Filtrage adaptatif (A)"
     visibleDescs := framework visibleFieldsAt: level.

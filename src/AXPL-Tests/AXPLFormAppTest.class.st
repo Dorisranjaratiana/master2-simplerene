@@ -89,7 +89,7 @@ AXPLFormAppTest >> testExplicationDesChampsMasquesDonneLeNiveauRequis [
 AXPLFormAppTest >> testHauteurSouhaiteeSuitLeNombreDeChamps [
     self assert: (app desiredHeightFor: 5 hiddenButtonShown: true)
         < (app desiredHeightFor: 11 hiddenButtonShown: true).
-    self assert: (app desiredHeightFor: 5 hiddenButtonShown: true) equals: 388.
+    self assert: (app desiredHeightFor: 5 hiddenButtonShown: true) equals: 353.
     self assert: (app desiredHeightFor: 0 hiddenButtonShown: false) equals: 300.
 ]
 
@@ -126,4 +126,33 @@ AXPLFormAppTest >> testLaFenetreOuverteSAdapteAuNiveau [
                 description: lvl asString , ' : hauteur ' , actual printString , ', attendu '
                     , expected printString , ' (écran ' , app currentWorld extent printString , ')' ] ]
         ensure: [ window close ].
+]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testEtatInitialNeutre [
+    "À l'ouverture : aucun niveau choisi, aucun formulaire, aucun bouton."
+    self assert: app levelDropList selectedItem isNil.
+    self assert: app formContainer layout presenters isEmpty.
+    self deny: app actionBar isVisible.
+]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testChoisirUnNiveauAfficheDirectementLeFormulaire [
+    "Plus de bouton Rafraîchir : la sélection suffit."
+    app levelDropList selectItem: #base.
+    self
+        assert: app formContainer layout presenters size
+        equals: ((AXPLFramework for: client) visibleFieldsAt: #base) size + 1.
+    self assert: app actionBar isVisible.
+]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testAnnulerDepuisExpertRevientALEcranNeutre [
+    "Régression : depuis Base/Expert, Annuler remettait la liste sur Simple,
+    ce qui relançait le rendu de Simple dans une fenêtre réduite."
+    app levelDropList selectItem: #expert.
+    app resetInterface.
+    self assert: app levelDropList selectedItem isNil.
+    self assert: app formContainer layout presenters isEmpty.
+    self deny: app actionBar isVisible.
 ]
