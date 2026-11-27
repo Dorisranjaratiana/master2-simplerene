@@ -92,6 +92,12 @@ AXPLSpecFormPresenter >> setLevel: aLevel validationHandler: aBlockOrNil [
 ]
 
 { #category : 'accessing' }
+AXPLSpecFormPresenter >> labelFor: aLabel [
+	"Le label (avec son infobulle ②) du champ de ce label, ou nil."
+	^ builder labelFor: aLabel
+]
+
+{ #category : 'accessing' }
 AXPLSpecFormPresenter >> widgetFor: aLabel [
 	"Le widget de saisie du champ de ce label (nil s'il n'est pas affiché)."
 	^ builder widgetFor: aLabel

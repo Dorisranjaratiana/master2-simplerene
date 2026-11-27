@@ -23,7 +23,8 @@ Class {
 	#superclass : 'SFGridPresenterBuilder',
 	#instVars : [
 		'level',
-		'widgets'
+		'widgets',
+		'labels'
 	],
 	#category : 'AXPL-SpecForm',
 	#package : 'AXPL-SpecForm'
@@ -31,14 +32,45 @@ Class {
 
 { #category : 'private' }
 AXPLSpecFormBuilder >> appendWidget: aWidget description: aDescription [
-	"SpDatePresenter (composite, pas un widget simple) n'a pas d'infobulle :
-	vérifié par la CI, help: y lève doesNotUnderstand."
+	"Le label est un vrai presenter (et non la String que Spec-Form met
+	dans sa grille) : c'est lui qui porte l'infobulle ② (ou ⚠), comme dans
+	la fenêtre AXΨL d'origine. Au survol du champ de saisie, Morphic
+	n'affichait pas l'infobulle — constaté dans une vraie image.
+	SpDatePresenter (composite) n'a pas d'infobulle : help: y lève
+	doesNotUnderstand (vérifié par la CI)."
+	| label |
+	label := presenter newLabel label: (self labelTextFor: aDescription).
+	self labels at: aDescription put: label.
 	self widgets at: aDescription put: aWidget.
-	self mark: aWidget for: aDescription with: nil.
+	self markDescription: aDescription with: nil.
 	builder
-		add: (self labelTextFor: aDescription);
+		add: label;
 		add: aWidget;
 		nextRow
+]
+
+{ #category : 'accessing' }
+AXPLSpecFormBuilder >> labelFor: aLabel [
+	"Le label (presenter) du champ de ce label, ou nil."
+	^ self labels keys
+		detect: [ :each | each label = aLabel ]
+		ifFound: [ :description | self labels at: description ]
+		ifNone: [ nil ]
+]
+
+{ #category : 'accessing' }
+AXPLSpecFormBuilder >> labels [
+	"description → label (SpLabelPresenter)"
+	^ labels ifNil: [ labels := IdentityDictionary new ]
+]
+
+{ #category : 'private' }
+AXPLSpecFormBuilder >> markDescription: aDescription with: aMessageOrNil [
+	"L'explication (ou le refus) sur le label ET sur le champ de saisie."
+	(self labels at: aDescription ifAbsent: [ nil ]) ifNotNil: [ :label |
+		self mark: label for: aDescription with: aMessageOrNil ].
+	(self widgets at: aDescription ifAbsent: [ nil ]) ifNotNil: [ :widget |
+		self mark: widget for: aDescription with: aMessageOrNil ]
 ]
 
 { #category : 'private' }
@@ -162,8 +194,7 @@ AXPLSpecFormBuilder >> write: anObject description: aDescription [
 	| message |
 	message := aDescription validationMessageFor: anObject.
 	message ifNil: [ super write: anObject description: aDescription ].
-	(self widgets at: aDescription ifAbsent: [ nil ]) ifNotNil: [ :widget |
-		self mark: widget for: aDescription with: message ].
+	self markDescription: aDescription with: message.
 	presenter notifyValidationOf: aDescription message: message.
 	^ message
 ]

@@ -24,8 +24,8 @@ AXPLSpecFormTest >> setUp [
 
 { #category : 'private' }
 AXPLSpecFormTest >> widgetsOf: aPresenter [
-	"La grille alterne label (String) et widget."
-	^ aPresenter layout presenters reject: [ :each | each isString ]
+	"La grille alterne label (SpLabelPresenter) et widget."
+	^ aPresenter layout presenters reject: [ :each | each isKindOf: SpLabelPresenter ]
 ]
 
 { #category : 'tests' }
@@ -41,7 +41,9 @@ AXPLSpecFormTest >> testUnLabelEtUnWidgetParChampVisible [
 { #category : 'tests' }
 AXPLSpecFormTest >> testLesLabelsMarquentLesChampsRequis [
 	| labels |
-	labels := (framework specFormPresenterAt: #simple) layout presenters select: [ :each | each isString ].
+	labels := ((framework specFormPresenterAt: #simple) layout presenters
+		select: [ :each | each isKindOf: SpLabelPresenter ])
+			collect: [ :each | each label ].
 	self assert: (labels includes: 'Nom *').
 	self assert: (labels includes: 'Urgent').
 ]
@@ -132,4 +134,28 @@ AXPLSpecFormTest >> testLeChampAChoixGardeSaValeur [
 	dropList := (self widgetsOf: (framework specFormPresenterAt: #simple))
 		detect: [ :w | w isKindOf: SpDropListPresenter ].
 	self assert: dropList selectedItem equals: 'Féminin'.
+]
+
+{ #category : 'tests' }
+AXPLSpecFormTest >> testLeLabelPorteLExplicationDuNiveau [
+	"Régression, constatée dans une vraie image : avec les labels String de
+	Spec-Form, plus aucune infobulle d'explication au survol."
+	| nom |
+	nom := framework psiEngine readDescription: 'Nom'.
+	#( #simple #expert ) do: [ :lvl |
+		self
+			assert: ((framework specFormPresenterAt: lvl) labelFor: 'Nom') help
+			equals: (nom commentFor: lvl) ]
+]
+
+{ #category : 'tests' }
+AXPLSpecFormTest >> testLeLabelSignaleUneSaisieRefusee [
+	| presenter age |
+	presenter := framework specFormPresenterAt: #simple.
+	age := framework psiEngine readDescription: 'Âge'.
+	(presenter widgetFor: 'Âge') number: -5.
+	self assert: ((presenter labelFor: 'Âge') help beginsWith: '⚠').
+	(presenter widgetFor: 'Âge') number: 30.
+	self assert: (presenter labelFor: 'Âge') help equals: (age commentFor: #simple).
+	self assert: (presenter labelFor: 'Âge') label equals: 'Âge *'.
 ]
