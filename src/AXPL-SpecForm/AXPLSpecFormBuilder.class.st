@@ -24,7 +24,10 @@ Class {
 
 { #category : 'private' }
 AXPLSpecFormBuilder >> appendWidget: aWidget description: aDescription [
-	aWidget help: (aDescription commentFor: level).
+	"SpDatePresenter (composite, pas un widget simple) n'a pas d'infobulle :
+	vérifié par la CI, help: y lève doesNotUnderstand."
+	(aWidget respondsTo: #help:) ifTrue: [
+		aWidget help: (aDescription commentFor: level) ].
 	builder
 		add: (self labelTextFor: aDescription);
 		add: aWidget;
