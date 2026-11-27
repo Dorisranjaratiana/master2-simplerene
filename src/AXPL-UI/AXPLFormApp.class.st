@@ -199,6 +199,14 @@ AXPLFormApp >> levelDropList: anObject [
 	levelDropList := anObject
 ]
 
+{ #category : 'layout' }
+AXPLFormApp >> formHeightFor: aFieldCount [
+	"Hauteur du formulaire Spec-Form : 33 pixels par ligne (champ + espace
+	entre les lignes de la grille, cf. AXPLSpecFormBuilder >> visitContainer:),
+	la même règle que desiredHeightFor:hiddenButtonShown:."
+	^ aFieldCount * 33
+]
+
 { #category : 'accessing' }
 AXPLFormApp >> displayedRowCount [
 	"Lignes du formulaire affiché : une par champ (la grille Spec-Form
@@ -690,9 +698,13 @@ AXPLFormApp >> updateInterface [
         level: level
         owner: self
         validationHandler: [ :desc :message | self validationOf: desc changedTo: message ].
+    "Hauteur explicite : ajouté avec expand: false, le formulaire Spec-Form
+    ne recevait que sa hauteur « naturelle », celle d'UNE ligne de la
+    grille — seul le premier champ (Nom) était visible. Constaté dans une
+    vraie image."
     newLayout := SpBoxLayout newVertical
         spacing: 8;
-        add: formPresenter expand: false;
+        add: formPresenter height: (self formHeightFor: visibleDescs size);
         yourself.
 
     "② Champs masqués avec explication (X) — un seul bouton groupé plutôt

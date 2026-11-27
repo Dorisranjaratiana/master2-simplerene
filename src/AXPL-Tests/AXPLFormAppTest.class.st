@@ -293,3 +293,24 @@ AXPLFormAppTest >> testLeFormulaireEstDessineParSpecForm [
 	app resetInterface.
 	self assert: app formPresenter isNil.
 ]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testLeFormulaireAfficheToutesSesLignes [
+	"Régression, constatée dans une vraie image : le formulaire Spec-Form,
+	ajouté sans hauteur, n'avait à l'écran que la hauteur d'une ligne —
+	seul « Nom » apparaissait. On mesure ici la hauteur réelle du
+	formulaire dans une fenêtre ouverte, à chaque niveau."
+	| window |
+	window := app open.
+	[ AXPLFormBuilder levels do: [ :lvl |
+			| visible formMorph |
+			app levelDropList selectItem: lvl.
+			visible := (AXPLFramework for: client) visibleFieldsAt: lvl.
+			window adapter widget fullBounds.
+			formMorph := app formPresenter adapter widget.
+			self
+				assert: formMorph height >= (visible size * 25)
+				description: lvl asString , ' : formulaire haut de ' , formMorph height printString
+					, ' pixels pour ' , visible size printString , ' champs' ] ]
+		ensure: [ window close ]
+]
