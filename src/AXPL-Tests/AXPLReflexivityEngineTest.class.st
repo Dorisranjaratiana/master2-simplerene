@@ -364,10 +364,12 @@ AXPLReflexivityEngineTest >> testAnnulerUneExplicationRemetLAideCommune [
         explanation: 'Aide commune.'.
     engine updateExplanation: 'Note interne' forLevel: #expert with: 'Aide experte.'.
     engine undoLast.
-    self assert: desc comment equals: 'Aide commune.'.
+    AXPLFormBuilder levels do: [ :lvl |
+        self assert: (desc commentFor: lvl) equals: 'Aide commune.' ].
     engine updateExplanation: 'Note interne' with: 'Autre aide.'.
     engine undoLast.
-    self assert: desc comment equals: 'Aide commune.'.
+    AXPLFormBuilder levels do: [ :lvl |
+        self assert: (desc commentFor: lvl) equals: 'Aide commune.' ].
 ]
 
 { #category : 'tests - annulation' }

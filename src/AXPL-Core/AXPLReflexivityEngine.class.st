@@ -114,23 +114,6 @@ AXPLReflexivityEngine >> createSelectionField: aLabel options: aCollection level
 ]
 
 { #category : 'private' }
-AXPLReflexivityEngine >> explanationDictionaryOf: aDescription [
-    "Le comment d'une description est nil, une String (la même aide à tous
-    les niveaux) ou un Dictionary par niveau. On le ramène toujours à un
-    Dictionary SANS perdre l'existant : une String devient la valeur de
-    chaque niveau, pour qu'expliquer un seul niveau n'efface pas l'aide
-    des autres."
-    | raw dict |
-    raw := aDescription comment.
-    (raw isKindOf: Dictionary) ifTrue: [ ^ raw ].
-    dict := Dictionary new.
-    (raw isString and: [ raw notEmpty ]) ifTrue: [
-        AXPLFormBuilder levels do: [ :each | dict at: each put: raw ] ].
-    aDescription comment: dict.
-    ^ dict
-]
-
-{ #category : 'private' }
 AXPLReflexivityEngine >> register: aDescription labelled: aLabel level: aLevel explanation: aTextOrNil [
     "Partie commune aux créations ⑥ : accessor vers #properties, niveau,
     position en fin de formulaire, explication ② éventuelle, trace [t]."
@@ -139,8 +122,9 @@ AXPLReflexivityEngine >> register: aDescription labelled: aLabel level: aLevel e
         accessor: (self accessorFor: (self accessorKeyFor: aLabel));
         level: aLevel;
         priority: self nextPriority.
-    (aTextOrNil notNil and: [ aTextOrNil notEmpty ])
-        ifTrue: [ aDescription comment: aTextOrNil ].
+    aDescription axplExplanation: ((AXPLExplanation common: aTextOrNil)
+        origin: #psi;
+        yourself).
     metaContainer add: aDescription.
     self
         record: 'Création : ' , aLabel
@@ -241,9 +225,9 @@ AXPLReflexivityEngine >> traceLog [
 
 { #category : 'intercession' }
 AXPLReflexivityEngine >> updateExplanation: aLabel forLevel: aLevel with: aText [
-    "⑤② Change l'explication d'un champ pour UN niveau ; celles des autres
-    niveaux sont conservées (y compris quand le champ n'avait qu'une aide
-    commune, cf. explanationDictionaryOf:). Comme les autres intercessions :
+    "⑤② Change l'explication d'un champ pour UN niveau (décorateur
+    AXPLExplanation, dans les propriétés de la description) ; celles des
+    autres niveaux, et l'aide commune, sont conservées. Comme les autres intercessions :
     niveau inconnu refusé, champ inconnu sans effet, changement tracé."
     | desc |
     self assertValidLevel: aLevel.
@@ -251,7 +235,7 @@ AXPLReflexivityEngine >> updateExplanation: aLabel forLevel: aLevel with: aText 
     desc ifNil: [ ^ self ].
     self
         changeExplanationOf: desc
-        by: [ (self explanationDictionaryOf: desc) at: aLevel put: aText ]
+        by: [ desc explanation text: aText forLevel: aLevel ]
         tracing: 'Explication : ' , aLabel , ' [' , aLevel asString , ']'
         as: (Dictionary new at: #op put: #explain; at: #label put: aLabel; at: #level put: aLevel; at: #text put: aText; yourself).
 ]
@@ -264,20 +248,20 @@ AXPLReflexivityEngine >> updateExplanation: aLabel with: aText [
     desc ifNil: [ ^ self ].
     self
         changeExplanationOf: desc
-        by: [ desc comment: aText ]
+        by: [ desc explanation beCommon: aText ]
         tracing: 'Explication : ' , aLabel , ' [tous niveaux]'
         as: (Dictionary new at: #op put: #explain; at: #label put: aLabel; at: #level put: nil; at: #text put: aText; yourself).
 ]
 
 { #category : 'private' }
 AXPLReflexivityEngine >> changeExplanationOf: aDescription by: aBlock tracing: aText as: aChange [
-    "Le Dictionary des explications est modifié EN PLACE : on garde une
-    copie de l'ancien comment (nil, String ou Dictionary) pour pouvoir le
-    remettre tel quel."
-    | oldComment |
-    oldComment := aDescription comment copy.
+    "Le décorateur d'explication est modifié EN PLACE : on en garde une
+    copie (ou nil s'il n'y en avait pas) pour le remettre tel quel. Le
+    #comment de SimpleRene n'est jamais touché."
+    | oldExplanation |
+    oldExplanation := aDescription axplExplanation copy.
     aBlock value.
-    self record: aText undo: [ aDescription comment: oldComment ] as: aChange
+    self record: aText undo: [ aDescription axplExplanation: oldExplanation ] as: aChange
 ]
 
 { #category : 'private' }

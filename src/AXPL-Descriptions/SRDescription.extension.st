@@ -11,16 +11,56 @@ SRDescription >> acceptAXPLVisitor: aVisitor [
 ]
 
 { #category : '*AXPL-Descriptions' }
+SRDescription >> axplExplanation [
+	"② Le décorateur d'explicabilité, ou nil s'il n'a jamais été posé."
+
+	^ self propertyAt: #axplExplanation ifAbsent: [ nil ]
+]
+
+{ #category : '*AXPL-Descriptions' }
+SRDescription >> axplExplanation: anExplanationOrNil [
+	"nil retire la propriété (retour au #comment de SimpleRene)."
+
+	self propertyAt: #axplExplanation putRemovingNil: anExplanationOrNil
+]
+
+{ #category : '*AXPL-Descriptions' }
 SRDescription >> commentFor: aLevel [
-	"② Explicabilité (X) : le vrai SRDescription>>#comment stocke soit une
-	String simple, soit un Dictionary #simple/#base/#expert (posé par AXPL).
-	On extrait ici le texte adapté au niveau demandé."
+	"② Explicabilité (X) : le texte à montrer à ce niveau. Ordre de
+	recherche : l'explication AXPL du niveau, puis l'explication AXPL
+	commune (AXPLExplanation, rangée dans les propriétés), puis le
+	#comment de SimpleRene. Un #comment Dictionary (ancien format AXPL)
+	reste lu, pour ne pas casser une application existante."
 
 	| raw |
+	self axplExplanation ifNotNil: [ :explanation |
+		(explanation textFor: aLevel) ifNotNil: [ :text | ^ text ] ].
 	raw := self comment.
 	raw ifNil: [ ^ '' ].
 	raw isString ifTrue: [ ^ raw ].
-	^ raw at: aLevel ifAbsent: [ raw at: #base ifAbsent: [ '' ] ]
+	(raw isKindOf: Dictionary) ifTrue: [
+		^ raw at: aLevel ifAbsent: [ raw at: #base ifAbsent: [ '' ] ] ].
+	^ ''
+]
+
+{ #category : '*AXPL-Descriptions' }
+SRDescription >> explanation [
+	"② Le décorateur d'explicabilité, créé au premier besoin (en reprenant
+	un éventuel #comment existant, pour ne rien perdre)."
+
+	^ self
+		propertyAt: #axplExplanation
+		ifAbsentPut: [ AXPLExplanation fromLegacyComment: self comment ]
+]
+
+{ #category : '*AXPL-Descriptions' }
+SRDescription >> explanation: aStringOrDictionary [
+	"② Déclare l'explication : une String (la même à tous les niveaux) ou
+	un Dictionary niveau → texte. N'écrit jamais dans #comment."
+
+	self axplExplanation: ((aStringOrDictionary isKindOf: Dictionary)
+		ifTrue: [ AXPLExplanation perLevel: aStringOrDictionary ]
+		ifFalse: [ AXPLExplanation common: aStringOrDictionary ])
 ]
 
 { #category : '*AXPL-Descriptions' }

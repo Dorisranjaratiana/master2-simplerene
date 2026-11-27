@@ -36,7 +36,8 @@ Metacello new
 - Ψ ↶ : *Ψ → Annuler la dernière modification Ψ* défait les intercessions une à une, de la plus récente à la plus ancienne (création, suppression — le champ revient à sa place avec sa valeur et ses explications —, renommage, niveau, explication) ; l'annulation est tracée
 - 💾 sauvegarde STON : *Enregistrer* écrit le dossier (valeurs + modifications Ψ + trace) dans un fichier lisible, *Ouvrir…* le recharge ; les modifications Ψ sont rejouées sur un formulaire neuf et restent annulables ; les mots de passe ne sont jamais écrits ; une valeur invalide dans le fichier n'est pas réécrite
 - web : `explanation` facultatif dans `POST /psi/create-field`, nouvelles routes `POST /psi/explain` et `POST /psi/undo`
-- 133 tests
+- ② explications rangées dans les propriétés de la description (`propertyAt: #axplExplanation`) par un décorateur `AXPLExplanation`, au lieu du `comment` de SimpleRene (qui reste une aide String, affichable par Spec-Form) ; ancien format toujours lu
+- 143 tests
 
 **v1.0.0** — première version stable :
 - dépendance réelle à SimpleRene (extensions, jamais de réimplémentation), Teapot et NeoJSON — toutes épinglées sur un commit
@@ -126,7 +127,7 @@ MaClasse class >> descriptionForAXPL [
 | `accessor:` sur chaque description | **Oui** | Un Symbol correspondant à un getter/setter d'instance sur `MaClasse` (ex: `#nom` requiert `nom`/`nom:`) |
 | `priority:` sur chaque description | Recommandé | Un Integer — `SRPriorityContainer` trie ses enfants par priorité ; sans cette valeur, l'ordre d'affichage n'est pas garanti |
 | `level:` sur chaque description | Recommandé | Un des niveaux de `AXPLFormBuilder levels` (par défaut `#simple`, `#base`, `#expert`) — sans cette valeur, `#simple` s'applique (valeur de repli dans `SRDescription >> level`, extension AXPL) |
-| `comment:` sur chaque description | Optionnel | Une String (même explication à tous les niveaux) ou un `Dictionary` clé = niveau (② — explicabilité graduée, ex: `Dictionary new at: #simple put: '...'; at: #expert put: '...'; yourself`) |
+| `explanation:` sur chaque description | Optionnel | ② explicabilité graduée : une String (même explication à tous les niveaux) ou un `Dictionary` clé = niveau (ex: `Dictionary new at: #simple put: '...'; at: #expert put: '...'; yourself`). Rangée dans les **propriétés** de la description (`propertyAt: #axplExplanation`, décorateur `AXPLExplanation`) ; le `comment:` de SimpleRene reste une simple aide (String) et sert de repli. Un ancien `comment:` Dictionary (AXPL v1) reste lu |
 | `properties` sur `MaClasse` | Nécessaire **seulement** pour Ψ | `^ properties ifNil: [ properties := Dictionary new ]` — requis uniquement si vous voulez que `AXPLReflexivityEngine>>createField:type:level:` puisse ajouter un champ à l'exécution sans variable d'instance dédiée (voir `SRPluggableAccessor`) |
 
 ### Classes de description disponibles
@@ -198,12 +199,12 @@ Un chargement par défaut (`load.`) tire le groupe `default` = `core` = tout sau
 
 ## Dépendance
 
-AXPL **dépend réellement** de [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (Ducasse et al., MIT License), déclaré comme projet externe dans `BaselineOfAXPL`. Le package `AXPL-Descriptions` n'y ajoute que ce que SimpleRene n'a pas nativement — les propriétés `level`/`level:` et `commentFor:` (explicabilité graduée par niveau) — via des méthodes d'extension sur `SRDescription`, plutôt qu'en dupliquant sa hiérarchie de classes.
+AXPL **dépend réellement** de [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (Ducasse et al., MIT License), déclaré comme projet externe dans `BaselineOfAXPL`. Le package `AXPL-Descriptions` n'y ajoute que ce que SimpleRene n'a pas nativement — le niveau `level`/`level:` et l'explicabilité graduée `explanation:`/`commentFor:` — via des méthodes d'extension sur `SRDescription`, rangés dans son dictionnaire de **propriétés** (`propertyAt:`, le mécanisme d'extension de SimpleRene) plutôt qu'en dupliquant sa hiérarchie de classes ou en détournant un de ses champs. L'explication est un décorateur, `AXPLExplanation` (texte par niveau, texte commun, origine : champ déclaré ou créé par Ψ).
 
 **Spec2** est livré avec toute image Pharo : on ne le déclare pas en dépendance de baseline, comme tout projet qui utilise l'interface native de Pharo.
 
 **Sur Spec-Form** : [Spec-Form](https://github.com/pharo-spec/Spec-Form) (Esteban Lorenzano, organisation pharo-spec) est un prototype qui génère des formulaires Spec2 à partir des descriptions SimpleRene (`unObjet asFormPresenter`, mise en page en grille). AXPL **ne l'utilise pas encore** : son générateur desktop (`AXPLSpecVisitor`) est autonome — c'est la version présentée au jury. Ce qu'AXPL apporte en plus d'un formulaire généré (filtrage par niveau ①, explications graduées ②, réflexivité Ψ, trace, annulation, sauvegarde) ne dépend pas de la façon d'afficher les champs ; réutiliser Spec-Form pour l'affichage est une piste de travail. Deux points à régler pour cela :
-- Spec-Form affiche le `comment` d'une description comme texte d'aide, alors qu'AXPL y range aujourd'hui un Dictionary d'explications par niveau : les explications doivent passer dans les propriétés de la description (`propertyAt:`) ;
+- ✅ Spec-Form affiche le `comment` d'une description comme texte d'aide : AXPL n'y range plus ses explications par niveau (elles sont dans `propertyAt: #axplExplanation`), le `comment` reste une String comme le prévoit SimpleRene ;
 - vérifier que Spec-Form (dernier commit : novembre 2023) se charge et fonctionne avec Pharo 13 et la version de SimpleRene épinglée par AXPL.
 
 ## Portage vers d'autres cibles
