@@ -41,7 +41,8 @@ Metacello new
 - scénario réflexif exécutable `AXPLReflexiveScenario` (l'épidémie), `AXPLFormApp openOn:level:`
 - **Spec-Form** (proposé par S. Ducasse) : dépendance de la baseline ; le formulaire de `AXPLFormApp` est dessiné par Spec-Form (`AXPLSpecFormPresenter`), avec niveaux ①, explications ② et validation de chaque saisie ; quatre manques de Spec-Form sous Pharo 13 comblés (`AXPLSpecFormBuilder`)
 - **Contextes** (objectif 2 de S. Ducasse) : hiérarchie `AXPLContext` / `AXPLLevelContext` / `AXPLRequiredOnlyContext` / `AXPLCompositeContext`, `visibleFieldsIn:` / `hiddenFieldsIn:`, raison de chaque masquage ; case « Obligatoires seulement » dans la fenêtre
-- 174 tests
+- **Commandes et menus** (objectif 3 de S. Ducasse) : commandes Commander2 (`AXPLCommand`, `AXPLFieldCommand` générées depuis les descriptions) et barre de menus Dossier / Champs / Ψ construite par Spec
+- 182 tests
 
 **v1.0.0** — première version stable :
 - dépendance réelle à SimpleRene (extensions, jamais de réimplémentation), Teapot et NeoJSON — toutes épinglées sur un commit
@@ -173,6 +174,25 @@ framework hiddenFieldsIn: AXPLContext requiredOnly.
 ```
 
 Chaque contexte dit **pourquoi** il masque un champ (②). Dans `AXPLFormApp`, la case **« Obligatoires seulement »** combine le niveau choisi et `AXPLRequiredOnlyContext` ; le bouton des champs masqués donne la raison de chaque masquage. Un nouveau contexte est une simple sous-classe d'`AXPLContext` : le framework n'a pas à changer.
+
+## Commandes et menus (objectif 3)
+
+Les actions de la fenêtre sont des **commandes** [Commander2](https://github.com/pharo-spec/Spec) (`CmCommand`), et **Spec construit la barre de menus avec elles** — comme proposé par S. Ducasse (« créer des commandes avec les descriptions, et créer des menus avec les commandes (Spec fait déjà cela) ») :
+
+```
+AXPLCommand                       contexte = la fenêtre AXPLFormApp
+ ├─ Ouvrir…, Enregistrer, Réinitialiser                     menu Dossier
+ ├─ Créer un champ…, Annuler la dernière modification Ψ, Trace Ψ   menu Ψ
+ └─ AXPLFieldCommand              générées depuis chaque description (menu Champs ▸ <champ>)
+     ├─ Pourquoi ce champ ?            ② type, obligatoire, niveau requis, origine, explication
+     ├─ Renommer… (Ψ)   Changer le niveau… (Ψ)   Modifier l'explication… (Ψ)   Supprimer (Ψ)
+```
+
+```st
+AXPLFieldCommand commandsFor: (framework psiEngine readDescription: 'Nom').    "une commande de chaque sorte"
+```
+
+Le menu **Champs** a un sous-menu par champ affiché (il suit le niveau, le contexte et les modifications Ψ) ; les commandes Ψ ne sont exécutables qu'au niveau le plus privilégié. Ajouter une commande à tous les champs = ajouter une sous-classe d'`AXPLFieldCommand`.
 
 ## Niveaux configurables
 

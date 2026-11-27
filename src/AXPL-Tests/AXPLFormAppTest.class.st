@@ -89,7 +89,8 @@ AXPLFormAppTest >> testExplicationDesChampsMasquesDonneLeNiveauRequis [
 AXPLFormAppTest >> testHauteurSouhaiteeSuitLeNombreDeChamps [
     self assert: (app desiredHeightFor: 5 hiddenButtonShown: true)
         < (app desiredHeightFor: 11 hiddenButtonShown: true).
-    self assert: (app desiredHeightFor: 5 hiddenButtonShown: true) equals: 353.
+    "353 mesurés sur une vraie fenêtre, + 35 pour la barre de menus (objectif 3)."
+    self assert: (app desiredHeightFor: 5 hiddenButtonShown: true) equals: 353 + AXPLFormApp menuBarHeight.
     self assert: (app desiredHeightFor: 0 hiddenButtonShown: false) equals: 300.
 ]
 

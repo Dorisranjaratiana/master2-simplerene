@@ -33,7 +33,9 @@ Class {
 		'dossiersDirectory',
 		'currentDossierName',
 		'formPresenter',
-		'requiredOnlyCheckBox'
+		'requiredOnlyCheckBox',
+		'menuContainer',
+		'menuBar'
 	],
 	#category : 'AXPL-UI',
 	#package : 'AXPL-UI'
@@ -41,8 +43,15 @@ Class {
 
 { #category : 'accessing' }
 AXPLFormApp class >> neutralHeight [
-    "Écran neutre : statut + liste des niveaux, sans formulaire ni boutons."
-    ^ 130
+    "Écran neutre : barre de menus, statut, liste des niveaux, sans
+    formulaire ni boutons."
+    ^ 130 + self menuBarHeight
+]
+
+{ #category : 'accessing' }
+AXPLFormApp class >> menuBarHeight [
+    "Barre de menus (25) et l'espacement qui la suit (10)."
+    ^ 35
 ]
 
 { #category : 'instance creation' }
@@ -78,6 +87,7 @@ AXPLFormApp >> defaultLayout [
     ^ SpBoxLayout newTopToBottom
         spacing: 10;
         borderWidth: 15;
+        add: menuContainer height: 25;
         add: statusLabel expand: false;
         add: (SpBoxLayout newHorizontal
             spacing: 8;
@@ -149,6 +159,8 @@ AXPLFormApp >> initializePresenters [
     formContainer layout: SpBoxLayout newVertical.
     bodyContainer := self newPresenter.
     bodyContainer layout: SpBoxLayout newVertical.
+    menuContainer := self newPresenter.
+    menuContainer layout: SpBoxLayout newVertical.
     "Objectif 2 : le contexte AXPLRequiredOnlyContext, combiné au niveau."
     requiredOnlyCheckBox := self newCheckBox
         label: 'Obligatoires seulement';
@@ -183,6 +195,7 @@ AXPLFormApp >> initializePresenters [
             action: [ self save ];
             yourself) expand: true;
         yourself).
+    self refreshMenuBar.
 ]
 
 { #category : 'initialization' }
@@ -305,6 +318,7 @@ AXPLFormApp >> showNeutralState [
     formContainer layout: SpBoxLayout newVertical.
     bodyContainer layout: SpBoxLayout newVertical.
     statusLabel label: self class neutralMessage.
+    self refreshMenuBar.
 ]
 
 { #category : 'psi' }
@@ -425,48 +439,58 @@ AXPLFormApp >> runPsiEditExplanation: aLabel [
 ]
 
 { #category : 'psi' }
+AXPLFormApp >> runPsiChangeLevel: aLabel [
+    "⑨ Ψ change le niveau qui voit ce champ (avec confirmation)."
+    | niveauChoix niveaux nouveauNiveau |
+    niveaux := AXPLFormBuilder levels collect: [ :each | each asString ].
+    niveauChoix := UIManager default
+        chooseFrom: niveaux
+        title: 'Ψ — Nouveau niveau pour "' , aLabel , '"'.
+    (niveauChoix isNil or: [ niveauChoix = 0 ]) ifTrue: [ ^ self ].
+    nouveauNiveau := (niveaux at: niveauChoix) asSymbol.
+    (UIManager default confirm:
+        'Changer le niveau de "' , aLabel , '" en #' , nouveauNiveau , ' ?')
+        ifFalse: [ ^ self ].
+    self psiEngine setLevel: nouveauNiveau ofDescription: aLabel.
+    self inform:
+        'Ψ appliqué : "' , aLabel
+        , '" → niveau #' , nouveauNiveau
+        , String cr
+        , 'Horodatage : ' , DateAndTime now printString.
+    self updateInterface
+]
+
+{ #category : 'psi' }
 AXPLFormApp >> runPsiEditField: aLabel [
     "④⑨⑤ Ψ change le niveau, renomme ou réexplique un champ existant."
     | choix |
     choix := UIManager default
         chooseFrom: #( 'Changer le niveau' 'Modifier le label' 'Modifier l''explication' )
         title: 'Ψ — Que voulez-vous modifier sur "' , aLabel , '" ?'.
-    choix = 1 ifTrue: [
-        | niveauChoix niveaux nouveauNiveau |
-        niveaux := AXPLFormBuilder levels collect: [ :each | each asString ].
-        niveauChoix := UIManager default
-            chooseFrom: niveaux
-            title: 'Ψ — Nouveau niveau pour "' , aLabel , '"'.
-        (niveauChoix notNil and: [ niveauChoix > 0 ]) ifTrue: [
-            nouveauNiveau := (niveaux at: niveauChoix) asSymbol.
-            (UIManager default confirm:
-                'Changer le niveau de "' , aLabel , '" en #' , nouveauNiveau , ' ?')
-                ifTrue: [
-                    self psiEngine setLevel: nouveauNiveau ofDescription: aLabel.
-                    self inform:
-                        'Ψ appliqué : "' , aLabel
-                        , '" → niveau #' , nouveauNiveau
-                        , String cr
-                        , 'Horodatage : ' , DateAndTime now printString.
-                    self updateInterface ] ] ].
-    choix = 2 ifTrue: [
-        | nouveauLabel |
-        nouveauLabel := UIManager default
-            request: 'Nouveau label pour "' , aLabel , '" :'
-            initialAnswer: aLabel.
-        (nouveauLabel notNil and: [ nouveauLabel notEmpty ]) ifTrue: [
-            (UIManager default confirm:
-                'Renommer "' , aLabel , '" en "' , nouveauLabel , '" ?')
-                ifTrue: [
-                    [ self psiEngine relabelDescription: aLabel to: nouveauLabel ]
-                        on: Error
-                        do: [ :err | ^ self inform: 'Ψ refusé : ' , err messageText ].
-                    self inform:
-                        'Ψ : "' , aLabel , '" → "' , nouveauLabel , '".'
-                        , String cr
-                        , 'Horodatage : ' , DateAndTime now printString.
-                    self updateInterface ] ] ].
-    choix = 3 ifTrue: [ self runPsiEditExplanation: aLabel ].
+    choix = 1 ifTrue: [ ^ self runPsiChangeLevel: aLabel ].
+    choix = 2 ifTrue: [ ^ self runPsiRelabel: aLabel ].
+    choix = 3 ifTrue: [ ^ self runPsiEditExplanation: aLabel ].
+]
+
+{ #category : 'psi' }
+AXPLFormApp >> runPsiRelabel: aLabel [
+    "④ Ψ renomme un champ (avec confirmation)."
+    | nouveauLabel |
+    nouveauLabel := UIManager default
+        request: 'Nouveau label pour "' , aLabel , '" :'
+        initialAnswer: aLabel.
+    (nouveauLabel isNil or: [ nouveauLabel isEmpty ]) ifTrue: [ ^ self ].
+    (UIManager default confirm:
+        'Renommer "' , aLabel , '" en "' , nouveauLabel , '" ?')
+        ifFalse: [ ^ self ].
+    [ self psiEngine relabelDescription: aLabel to: nouveauLabel ]
+        on: Error
+        do: [ :err | ^ self inform: 'Ψ refusé : ' , err messageText ].
+    self inform:
+        'Ψ : "' , aLabel , '" → "' , nouveauLabel , '".'
+        , String cr
+        , 'Horodatage : ' , DateAndTime now printString.
+    self updateInterface
 ]
 
 { #category : 'psi' }
@@ -666,7 +690,7 @@ AXPLFormApp >> desiredHeightFor: visibleFieldCount hiddenButtonShown: hasHiddenB
     estimation (41 et 270) laissait un grand vide sous les champs."
     | rowCount |
     rowCount := visibleFieldCount + (hasHiddenButton ifTrue: [ 1 ] ifFalse: [ 0 ]).
-    ^ (rowCount * 33) + 155 max: 300
+    ^ (rowCount * 33) + 155 + self class menuBarHeight max: 300
 ]
 
 { #category : 'layout' }
@@ -769,6 +793,7 @@ AXPLFormApp >> updateInterface [
     bodyContainer layout: (self formBodyLayoutScrollable:
         (self desiredHeightFor: visibleDescs size hiddenButtonShown: hidden notEmpty)
             > self maxWindowHeight).
+    self refreshMenuBar.
 ]
 
 { #category : 'updating' }
@@ -891,4 +916,77 @@ AXPLFormApp >> runOpenDossier [
         on: Error
         do: [ :err | ^ self inform: 'Ouverture impossible : ' , err messageText ].
     self inform: 'Dossier « ' , (names at: index) , ' » ouvert.'
+]
+
+{ #category : 'commands' }
+AXPLFormApp class >> buildCommandsGroupWith: anAXPLFormApp forRoot: rootCommandGroup [
+	"Objectif 3 (S. Ducasse) : « créer des commandes avec les descriptions
+	et créer des menus avec les commandes (Spec fait déjà cela) ». Les
+	commandes sont des CmCommand (Commander2) ; Spec en fait la barre de
+	menus. Le groupe Champs est généré depuis les descriptions affichées."
+	rootCommandGroup register: (self buildMenuBarGroupWith: anAXPLFormApp)
+]
+
+{ #category : 'commands' }
+AXPLFormApp class >> buildFieldsGroupWith: anAXPLFormApp [
+	"Un sous-menu par champ affiché, rempli par les commandes que
+	AXPLFieldCommand génère pour sa description."
+	| group |
+	group := (CmCommandGroup named: 'Champs') asSpecGroup.
+	group description: 'Commandes générées depuis les descriptions des champs affichés.'.
+	anAXPLFormApp displayedFields do: [ :description |
+		| fieldGroup |
+		fieldGroup := (CmCommandGroup named: description label) asSpecGroup.
+		(AXPLFieldCommand commandsFor: description) do: [ :command |
+			fieldGroup register: command asSpecCommand ].
+		group register: fieldGroup ].
+	^ group
+]
+
+{ #category : 'commands' }
+AXPLFormApp class >> buildMenuBarGroupWith: anAXPLFormApp [
+	^ (CmCommandGroup named: 'Menu') asSpecGroup
+		register: ((CmCommandGroup named: 'Dossier') asSpecGroup
+			register: AXPLOpenDossierCommand forSpec;
+			register: AXPLSaveCommand forSpec;
+			register: AXPLResetCommand forSpec;
+			yourself);
+		register: (self buildFieldsGroupWith: anAXPLFormApp);
+		register: ((CmCommandGroup named: 'Ψ') asSpecGroup
+			register: AXPLPsiCreateFieldCommand forSpec;
+			register: AXPLPsiUndoCommand forSpec;
+			register: AXPLTraceCommand forSpec;
+			yourself);
+		yourself
+]
+
+{ #category : 'commands' }
+AXPLFormApp >> displayedFields [
+	"Les descriptions des champs affichés dans le contexte courant."
+	framework ifNil: [ ^ #() ].
+	^ self currentContext
+		ifNil: [ #() ]
+		ifNotNil: [ :context | framework visibleFieldsIn: context ]
+]
+
+{ #category : 'testing' }
+AXPLFormApp >> isPsiAvailable [
+	"Ψ est réservé au niveau le plus privilégié."
+	^ levelDropList selectedItem = AXPLFormBuilder mostPrivilegedLevel
+]
+
+{ #category : 'accessing' }
+AXPLFormApp >> menuBar [
+	"La barre de menus (SpMenuBarPresenter), construite depuis les commandes."
+	^ menuBar
+]
+
+{ #category : 'commands' }
+AXPLFormApp >> refreshMenuBar [
+	"Les menus suivent le formulaire : ils sont reconstruits depuis les
+	commandes à chaque changement (niveau, contexte, Ψ)."
+	menuBar := (self rootCommandsGroup / 'Menu') asMenuBarPresenter.
+	menuContainer layout: (SpBoxLayout newVertical
+		add: menuBar;
+		yourself)
 ]
