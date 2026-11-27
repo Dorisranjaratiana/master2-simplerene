@@ -37,6 +37,19 @@ BaselineOfAXPL >> baseline: spec [
             baseline: 'NeoJSON'
             with: [ spec repository: 'github://svenvc/NeoJSON:11e274dd96dc9636cab90929937b7cd09719de7c/repository' ].
 
+        "Spec-Form (pharo-spec/Spec-Form, E. Lorenzano) : générateur de
+        formulaires Spec2 construit sur SimpleRene, que S. Ducasse a
+        proposé de réutiliser. Chargé comme PACKAGE, depuis son dépôt et
+        épinglé sur un commit, plutôt que par sa baseline : celle-ci
+        demande SimpleRene sans version, ce qui remplacerait la version
+        épinglée ci-dessus. Il n'est tiré que par le groupe #specform."
+        spec
+            package: 'Spec-Form'
+            with: [
+                spec
+                    repository: 'github://pharo-spec/Spec-Form:e05db156ea52b1f49e4b0189126488c3bad797a7/src';
+                    requires: #('SimpleRene') ].
+
         "Packages du projet dans l'ordre de dépendance.
         AXPL-UI (Spec2), AXPL-Json (export JSON) et AXPL-Web (API HTTP,
         pour un frontend séparé type React) sont trois implémentations
@@ -63,7 +76,9 @@ BaselineOfAXPL >> baseline: spec [
             package: 'AXPL-Scenarios' with: [ spec requires: #('AXPL-UI' 'AXPL-Examples') ];
             package: 'AXPL-Web' with: [ spec requires: #('AXPL-Json' 'Teapot' 'NeoJSON') ];
             package: 'AXPL-Tests' with: [ spec requires: #('AXPL-Core' 'AXPL-UI' 'AXPL-Json' 'AXPL-Examples' 'AXPL-Scenarios') ];
-            package: 'AXPL-Web-Tests' with: [ spec requires: #('AXPL-Web' 'AXPL-Examples') ].
+            package: 'AXPL-Web-Tests' with: [ spec requires: #('AXPL-Web' 'AXPL-Examples') ];
+            package: 'AXPL-SpecForm' with: [ spec requires: #('AXPL-Core' 'Spec-Form') ];
+            package: 'AXPL-SpecForm-Tests' with: [ spec requires: #('AXPL-SpecForm' 'AXPL-Examples') ].
 
         "Groupes de chargement : un simple `load` (sans groupe précisé)
         charge #default, donc reste 100% côté Pharo — Teapot/NeoJSON et
@@ -72,5 +87,6 @@ BaselineOfAXPL >> baseline: spec [
         spec
             group: 'core' with: #('AXPL-UI' 'AXPL-Json' 'AXPL-Examples' 'AXPL-Scenarios' 'AXPL-Tests');
             group: 'web' with: #('AXPL-Web' 'AXPL-Web-Tests');
+            group: 'specform' with: #('AXPL-SpecForm' 'AXPL-SpecForm-Tests');
             group: 'default' with: #('core') ]
 ]
