@@ -104,9 +104,11 @@ AXPLSpecFormTest >> testChaqueSaisieEstValideeAvantDEtreEcrite [
 { #category : 'tests' }
 AXPLSpecFormTest >> testSaveVerifieToutLeFormulaire [
 	| presenter |
+	"Un âge négatif écrit hors du formulaire (bePositive) est détecté."
+	client nom: 'Ranjaratiana'; prenom: 'Doris'; age: -5.
 	presenter := framework specFormPresenterAt: #simple.
 	self assert: presenter save notNil.
-	client nom: 'Ranjaratiana'; prenom: 'Doris'; age: 30.
+	client age: 30.
 	self assert: presenter save isNil.
 ]
 
