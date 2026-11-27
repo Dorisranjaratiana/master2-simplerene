@@ -336,3 +336,39 @@ AXPLFormAppTest >> testLInfobulleEstSurLeWidgetMorphicDuLabel [
 					, morph balloonText printString ] ]
 		ensure: [ window close ]
 ]
+
+{ #category : 'tests - contextes' }
+AXPLFormAppTest >> testCaseObligatoiresSeulement [
+	"Objectif 2 dans la fenêtre : la case combine le niveau et le contexte
+	« obligatoires seulement »."
+	| tous obligatoires |
+	app levelDropList selectItem: #expert.
+	tous := app formPresenter layout presenters size // 2.
+	app requiredOnlyCheckBox state: true.
+	obligatoires := (AXPLFramework for: client) visibleFieldsIn: app currentContext.
+	self assert: (obligatoires allSatisfy: [ :d | d isRequired ]).
+	self assert: app formPresenter layout presenters size // 2 equals: obligatoires size.
+	self assert: obligatoires size < tous.
+	self assert: (app currentContext isKindOf: AXPLCompositeContext).
+	app requiredOnlyCheckBox state: false.
+	self assert: app formPresenter layout presenters size // 2 equals: tous.
+]
+
+{ #category : 'tests - contextes' }
+AXPLFormAppTest >> testLExplicationDesChampsMasquesDonneLaRaisonDuContexte [
+	| hidden text |
+	app levelDropList selectItem: #expert.
+	app requiredOnlyCheckBox state: true.
+	hidden := (AXPLFramework for: client) hiddenFieldsIn: app currentContext.
+	text := app hiddenFieldsExplanationText: hidden.
+	self assert: (text includesSubstring: 'Niveau Expert + Champs obligatoires seulement').
+	self assert: (text includesSubstring: 'Sexe — champ facultatif').
+]
+
+{ #category : 'tests - contextes' }
+AXPLFormAppTest >> testAnnulerDecocheObligatoiresSeulement [
+	app levelDropList selectItem: #base.
+	app requiredOnlyCheckBox state: true.
+	app resetInterface.
+	self deny: app requiredOnlyCheckBox state.
+]

@@ -40,7 +40,8 @@ Metacello new
 - Ψ : API documentée en trois familles (introspection, intercession, histoire), introspection complétée (`fields`, `labels`, `levelOf:`, `typeOf:`, `explanationOf:forLevel:`, `psiCreatedLabels`)
 - scénario réflexif exécutable `AXPLReflexiveScenario` (l'épidémie), `AXPLFormApp openOn:level:`
 - **Spec-Form** (proposé par S. Ducasse) : dépendance de la baseline ; le formulaire de `AXPLFormApp` est dessiné par Spec-Form (`AXPLSpecFormPresenter`), avec niveaux ①, explications ② et validation de chaque saisie ; quatre manques de Spec-Form sous Pharo 13 comblés (`AXPLSpecFormBuilder`)
-- 158 tests
+- **Contextes** (objectif 2 de S. Ducasse) : hiérarchie `AXPLContext` / `AXPLLevelContext` / `AXPLRequiredOnlyContext` / `AXPLCompositeContext`, `visibleFieldsIn:` / `hiddenFieldsIn:`, raison de chaque masquage ; case « Obligatoires seulement » dans la fenêtre
+- 174 tests
 
 **v1.0.0** — première version stable :
 - dépendance réelle à SimpleRene (extensions, jamais de réimplémentation), Teapot et NeoJSON — toutes épinglées sur un commit
@@ -152,6 +153,26 @@ Garanties : niveau inconnu refusé, label en double refusé, champ inconnu sans 
 AXPLReflexiveScenario run log.    "exécute les 8 étapes et renvoie le récit"
 AXPLReflexiveScenario demo.       "étapes 1 à 7, récit dans le Transcript, fenêtre ouverte au niveau Simple"
 ```
+
+## Contextes (objectif 2)
+
+Ce qu'affiche le formulaire est décidé par un **contexte** — une petite hiérarchie de classes, comme proposé par S. Ducasse (« créer une petite hiérarchie de contexte ; par exemple un contexte peut enlever les descriptions qui sont optionnelles ») :
+
+```
+AXPLContext                    abstrait : accepts:, reasonForHiding:, label
+ ├─ AXPLLevelContext           le niveau de l'utilisateur (Simple / Base / Expert)
+ ├─ AXPLRequiredOnlyContext    seulement les champs obligatoires
+ └─ AXPLCompositeContext       plusieurs contextes à la fois (&)
+```
+
+```st
+framework visibleFieldsIn: (AXPLContext level: #base).
+framework visibleFieldsIn: (AXPLContext level: #simple) & AXPLContext requiredOnly.    "admission en urgence"
+framework hiddenFieldsIn: AXPLContext requiredOnly.
+(AXPLContext level: #simple) reasonForHiding: allergies.    "'visible à partir du niveau Expert'"
+```
+
+Chaque contexte dit **pourquoi** il masque un champ (②). Dans `AXPLFormApp`, la case **« Obligatoires seulement »** combine le niveau choisi et `AXPLRequiredOnlyContext` ; le bouton des champs masqués donne la raison de chaque masquage. Un nouveau contexte est une simple sous-classe d'`AXPLContext` : le framework n'a pas à changer.
 
 ## Niveaux configurables
 

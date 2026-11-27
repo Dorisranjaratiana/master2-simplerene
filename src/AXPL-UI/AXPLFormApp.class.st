@@ -32,7 +32,8 @@ Class {
 		'openButton',
 		'dossiersDirectory',
 		'currentDossierName',
-		'formPresenter'
+		'formPresenter',
+		'requiredOnlyCheckBox'
 	],
 	#category : 'AXPL-UI',
 	#package : 'AXPL-UI'
@@ -82,6 +83,7 @@ AXPLFormApp >> defaultLayout [
             spacing: 8;
             add: (self newLabel label: 'Niveau:') expand: false;
             add: levelDropList expand: true;
+            add: requiredOnlyCheckBox expand: false;
             add: openButton expand: false;
             yourself) expand: false;
         add: bodyContainer expand: true;
@@ -147,6 +149,12 @@ AXPLFormApp >> initializePresenters [
     formContainer layout: SpBoxLayout newVertical.
     bodyContainer := self newPresenter.
     bodyContainer layout: SpBoxLayout newVertical.
+    "Objectif 2 : le contexte AXPLRequiredOnlyContext, combiné au niveau."
+    requiredOnlyCheckBox := self newCheckBox
+        label: 'Obligatoires seulement';
+        help: 'Contexte : ne montrer que les champs obligatoires';
+        whenChangedDo: [ self updateInterface ];
+        yourself.
     psiButton := self newButton label: ''; yourself.
     openButton := self newButton
         label: 'Ouvrir…';
@@ -216,6 +224,23 @@ AXPLFormApp >> displayedRowCount [
 		+ (formContainer layout presenters size - 1)
 ]
 
+{ #category : 'updating' }
+AXPLFormApp >> currentContext [
+	"Objectif 2 : le contexte affiché — le niveau choisi, combiné au
+	contexte « obligatoires seulement » si la case est cochée (nil sur
+	l'écran neutre)."
+	| context |
+	levelDropList selectedItem ifNil: [ ^ nil ].
+	context := AXPLContext level: levelDropList selectedItem.
+	requiredOnlyCheckBox state ifTrue: [ context := context & AXPLContext requiredOnly ].
+	^ context
+]
+
+{ #category : 'accessing' }
+AXPLFormApp >> requiredOnlyCheckBox [
+	^ requiredOnlyCheckBox
+]
+
 { #category : 'accessing' }
 AXPLFormApp >> formPresenter [
 	"Le formulaire Spec-Form du niveau affiché (nil sur l'écran neutre)."
@@ -268,6 +293,7 @@ AXPLFormApp >> resetInterface [
     une fenêtre déjà réduite (champs écrasés, barres de défilement)."
     self targetObject: targetObject class new.
     currentDossierName := nil.
+    requiredOnlyCheckBox state: false.
     levelDropList resetSelection.
     self showNeutralState.
 ]
@@ -549,13 +575,17 @@ AXPLFormApp >> hiddenFieldsExplanationText: aCollectionOfDescriptions [
     du masquage), puis ce qu'il signifie à ce niveau-là. Avant, seule la
     signification au niveau courant était donnée — elle ne disait pas
     pourquoi le champ était caché ni comment le voir."
+    "Objectif 2 : la raison vient du contexte qui masque le champ (niveau
+    insuffisant, ou champ facultatif en « obligatoires seulement »)."
+    | context |
+    context := self currentContext.
     ^ aCollectionOfDescriptions
-        inject: 'Champs masqués au niveau ' , levelDropList selectedItem asString capitalized , ' :' , String cr
+        inject: 'Champs masqués — ' , context label , ' :' , String cr
         into: [ :acc :d |
             | required expl |
             required := AXPLFormBuilder requiredLevelFor: d.
             expl := d commentFor: required.
-            acc , '- ' , d label , ' — visible à partir du niveau ' , required asString capitalized
+            acc , '- ' , d label , ' — ' , (context reasonForHiding: d)
                 , (expl isEmpty ifTrue: [ '' ] ifFalse: [ ' : ' , expl ])
                 , String cr ]
 ]
@@ -663,13 +693,15 @@ AXPLFormApp >> traceButton: anObject [
 
 { #category : 'updating' }
 AXPLFormApp >> updateInterface [
-    | level visibleDescs hidden newLayout |
+    | level context visibleDescs hidden newLayout |
     targetObject ifNil: [ ^ self ].
     level := levelDropList selectedItem.
     level ifNil: [ ^ self showNeutralState ].
 
-    "① Filtrage adaptatif (A)"
-    visibleDescs := framework visibleFieldsAt: level.
+    "① Filtrage adaptatif (A), par le contexte courant (objectif 2) :
+    le niveau, éventuellement combiné à « obligatoires seulement »."
+    context := self currentContext.
+    visibleDescs := framework visibleFieldsIn: context.
 
     "Titre contextuel ; les nouveaux widgets affichent les valeurs de
     l'objet, donc aucune saisie refusée en attente."
@@ -696,6 +728,7 @@ AXPLFormApp >> updateInterface [
     formPresenter := AXPLSpecFormPresenter
         on: framework
         level: level
+        fields: visibleDescs
         owner: self
         validationHandler: [ :desc :message | self validationOf: desc changedTo: message ].
     "Hauteur explicite : ajouté avec expand: false, le formulaire Spec-Form
@@ -709,11 +742,11 @@ AXPLFormApp >> updateInterface [
 
     "② Champs masqués avec explication (X) — un seul bouton groupé plutôt
     qu'un par champ, pour ne pas noyer les champs visibles."
-    hidden := framework hiddenFieldsAt: level.
+    hidden := framework hiddenFieldsIn: context.
     hidden notEmpty ifTrue: [
         newLayout add: (self newButton
             icon: (self iconNamed: #help);
-            label: hidden size printString , ' champ(s) supplémentaire(s) masqué(s) — niveau supérieur requis';
+            label: hidden size printString , ' champ(s) masqué(s) dans ce contexte — pourquoi ?';
             action: [ self showHiddenFieldsExplanation: hidden ])
             expand: false ].
 

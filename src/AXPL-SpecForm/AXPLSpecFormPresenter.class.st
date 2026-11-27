@@ -39,11 +39,24 @@ AXPLSpecFormPresenter class >> on: anAXPLFramework level: aLevel [
 AXPLSpecFormPresenter class >> on: anAXPLFramework level: aLevel owner: aPresenterOrNil validationHandler: aBlockOrNil [
 	"aBlockOrNil : [ :description :messageOrNil | ... ], appelé après chaque
 	saisie (message de SimpleRene si elle est refusée, nil sinon)."
+	^ self
+		on: anAXPLFramework
+		level: aLevel
+		fields: (anAXPLFramework visibleFieldsAt: aLevel)
+		owner: aPresenterOrNil
+		validationHandler: aBlockOrNil
+]
+
+{ #category : 'instance creation' }
+AXPLSpecFormPresenter class >> on: anAXPLFramework level: aLevel fields: aCollectionOfDescriptions owner: aPresenterOrNil validationHandler: aBlockOrNil [
+	"aCollectionOfDescriptions : les champs à montrer (choisis par un
+	contexte, cf. AXPLFramework >> visibleFieldsIn:) ; aLevel : le niveau
+	dont on montre les explications ②."
 	| container memento form |
 	container := SRPriorityContainer new.
 	container label: anAXPLFramework metaContainer label.
 	container initialExtent: 520 @ 640.
-	(anAXPLFramework visibleFieldsAt: aLevel) do: [ :each | container add: each ].
+	aCollectionOfDescriptions do: [ :each | container add: each ].
 	memento := SRStraightMemento
 		model: anAXPLFramework targetObject
 		description: container.

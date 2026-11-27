@@ -102,6 +102,11 @@ AXPLFormBuilder >> targetObject: anObject [
 ]
 
 { #category : 'accessing' }
+AXPLFormBuilder >> userLevel [
+	^ userLevel
+]
+
+{ #category : 'accessing' }
 AXPLFormBuilder >> userLevel: aSymbol [
 	"Un niveau invalide était auparavant traité silencieusement comme le
 	plus bas — dangereux maintenant qu'AXPLWebServer accepte ce niveau

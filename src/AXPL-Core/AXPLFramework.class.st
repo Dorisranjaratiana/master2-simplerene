@@ -173,3 +173,17 @@ AXPLFramework >> snapshot [
 AXPLFramework >> stonString [
 	^ STON toStringPretty: self snapshot
 ]
+
+{ #category : 'building' }
+AXPLFramework >> hiddenFieldsIn: anAXPLContext [
+	"② Les champs masqués dans ce contexte (complément de visibleFieldsIn:) ;
+	anAXPLContext reasonForHiding: dit pourquoi."
+	^ anAXPLContext hidden: metaContainer children
+]
+
+{ #category : 'building' }
+AXPLFramework >> visibleFieldsIn: anAXPLContext [
+	"Objectif 2 : les champs montrés dans ce contexte (AXPLContext et ses
+	sous-classes), dans l'ordre du formulaire, champs Ψ compris."
+	^ anAXPLContext filter: metaContainer children
+]
