@@ -945,7 +945,10 @@ AXPLFormApp class >> buildFieldsGroupWith: anAXPLFormApp [
 
 { #category : 'commands' }
 AXPLFormApp class >> buildMenuBarGroupWith: anAXPLFormApp [
+	"beDisplayedAsGroup : sinon Spec affiche ce groupe comme UN menu
+	« Menu » contenant Dossier, Champs et Ψ (constaté par la CI)."
 	^ (CmCommandGroup named: 'Menu') asSpecGroup
+		beDisplayedAsGroup;
 		register: ((CmCommandGroup named: 'Dossier') asSpecGroup
 			register: AXPLOpenDossierCommand forSpec;
 			register: AXPLSaveCommand forSpec;
