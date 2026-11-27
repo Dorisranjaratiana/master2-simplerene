@@ -314,3 +314,24 @@ AXPLFormAppTest >> testLeFormulaireAfficheToutesSesLignes [
 					, ' pixels pour ' , visible size printString , ' champs' ] ]
 		ensure: [ window close ]
 ]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testLInfobulleEstSurLeWidgetMorphicDuLabel [
+	"Ce que Morphic affiche au survol : le balloonText du morph du label,
+	dans une vraie fenêtre ouverte (pas seulement le help du presenter)."
+	| window nom |
+	nom := app psiEngine readDescription: 'Nom'.
+	window := app open.
+	[ #( #simple #expert ) do: [ :lvl |
+			| label morph |
+			app levelDropList selectItem: lvl.
+			window adapter widget fullBounds.
+			label := app formPresenter labelFor: 'Nom'.
+			morph := label adapter widget.
+			self
+				assert: morph balloonText asString
+				equals: (nom commentFor: lvl)
+				description: lvl asString , ' : morph ' , morph class name , ' balloonText = '
+					, morph balloonText printString ] ]
+		ensure: [ window close ]
+]
