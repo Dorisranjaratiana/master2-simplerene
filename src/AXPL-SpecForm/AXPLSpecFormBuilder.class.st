@@ -87,8 +87,10 @@ AXPLSpecFormBuilder >> visitStringDescription: aDescription [
 
 { #category : 'visiting' }
 AXPLSpecFormBuilder >> visitSingleOptionDescription: aDescription [
+	"newDropList du trait SpTPresenterBuilder passe par #application, que
+	ce constructeur n'a pas : on le demande au presenter du formulaire."
 	| dropList |
-	dropList := self newDropList.
+	dropList := self presenter newDropList.
 	dropList
 		startWithoutSelection;
 		items: aDescription options;
