@@ -37,7 +37,9 @@ Metacello new
 - 💾 sauvegarde STON : *Enregistrer* écrit le dossier (valeurs + modifications Ψ + trace) dans un fichier lisible, *Ouvrir…* le recharge ; les modifications Ψ sont rejouées sur un formulaire neuf et restent annulables ; les mots de passe ne sont jamais écrits ; une valeur invalide dans le fichier n'est pas réécrite
 - web : `explanation` facultatif dans `POST /psi/create-field`, nouvelles routes `POST /psi/explain` et `POST /psi/undo`
 - ② explications rangées dans les propriétés de la description (`propertyAt: #axplExplanation`) par un décorateur `AXPLExplanation`, au lieu du `comment` de SimpleRene (qui reste une aide String, affichable par Spec-Form) ; ancien format toujours lu
-- 143 tests
+- Ψ : API documentée en trois familles (introspection, intercession, histoire), introspection complétée (`fields`, `labels`, `levelOf:`, `typeOf:`, `explanationOf:forLevel:`, `psiCreatedLabels`)
+- scénario réflexif exécutable `AXPLReflexiveScenario` (l'épidémie), `AXPLFormApp openOn:level:`
+- 148 tests
 
 **v1.0.0** — première version stable :
 - dépendance réelle à SimpleRene (extensions, jamais de réimplémentation), Teapot et NeoJSON — toutes épinglées sur un commit
@@ -95,6 +97,59 @@ Tous les visiteurs se construisent de la même façon, avec l'objet métier et l
 ```st
 json := (AXPLJsonVisitor on: client level: #simple) visit: visible.
 layout := ((AXPLSpecVisitor on: client level: #simple) presenter: unSpPresenter; yourself) visit: visible.
+```
+
+## Réflexivité Ψ — l'API
+
+Le moteur Ψ (`framework psiEngine`, classe `AXPLReflexivityEngine`) permet au formulaire de **s'observer et de se modifier pendant que l'application tourne**, sans toucher au code de la classe métier, sans recompiler ni redémarrer. Il agit sur le méta-modèle (les descriptions SimpleRene du formulaire). Ses méthodes sont rangées en trois familles, qui sont aussi les catégories de méthodes de la classe :
+
+**Introspection ③** — lire le méta-modèle
+
+| Message | Réponse |
+|---|---|
+| `fields`, `labels` | les champs du formulaire |
+| `readDescription: 'Nom'` | la description SimpleRene du champ (ou `nil`) |
+| `levelOf: 'Nom'`, `typeOf: 'Nom'` | son niveau, sa classe de description |
+| `explanationOf: 'Nom' forLevel: #base` | son explication ② à ce niveau |
+| `psiCreatedLabels` | les champs créés à l'exécution par Ψ |
+
+**Intercession ④⑤⑥⑨** — modifier le méta-modèle à l'exécution
+
+| Message | Effet |
+|---|---|
+| `createField: 'Note' type: SRStringDescription level: #base explanation: '…'` | ⑥ nouveau champ (Texte, Nombre, Booléen, Date…) |
+| `createSelectionField: 'Groupe' options: #('A' 'B') level: #base explanation: '…'` | ⑥ nouveau champ à choix |
+| `removeField: 'Note'` | ⑥ retire un champ |
+| `relabelDescription: 'Allergies' to: 'Risques'` | ④ renomme (les explications sont gardées) |
+| `setLevel: #simple ofDescription: 'Allergies'` | ⑨ change le niveau qui voit le champ |
+| `updateExplanation: 'Nom' forLevel: #expert with: '…'` / `updateExplanation: 'Nom' with: '…'` | ⑤② change l'explication (un niveau / tous) |
+
+Garanties : niveau inconnu refusé, label en double refusé, champ inconnu sans effet. Un champ créé n'a pas de variable d'instance : sa valeur vit dans le dictionnaire `properties` de l'objet métier.
+
+**Histoire [t] ↶ 💾** — garder la trace, annuler, rejouer
+
+| Message | Rôle |
+|---|---|
+| `traceLog` | chaque intercession, horodatée |
+| `canUndo`, `lastUndoableChange`, `undoLast` | annuler, de la plus récente à la plus ancienne |
+| `changes`, `replayChanges:` | les intercessions actives en données (sans bloc) : sauvegarde STON et rejeu |
+
+## Scénario réflexif : l'épidémie
+
+`AXPLReflexiveScenario` (package `AXPL-Scenarios`) est un scénario d'action réflexive exécutable, vérifié par la CI (`AXPLReflexiveScenarioTest`). Le dossier patient `ClientHopital` est en service ; une épidémie se déclare et le médecin-chef adapte le formulaire **pendant que l'application tourne** :
+
+1. **Introspection ③** — l'infirmière (Simple) voit 5 champs ; « Allergies » est réservé au niveau Expert.
+2. **Intercession ⑥②** — création de « Statut infectieux » (Simple), avec une explication par niveau.
+3. **Intercession ⑨** — « Allergies » devient visible dès le niveau Simple.
+4. **Intercession ④⑤** — renommé « Risques allergiques », explication Simple adaptée.
+5. **Effet ①** — sans redémarrer, l'infirmière voit 7 champs et saisit les valeurs.
+6. **Trace [t]** — 5 intercessions horodatées.
+7. **Sauvegarde 💾** — le dossier rechargé a le même formulaire et les mêmes valeurs.
+8. **Annulation ↶** — fin de l'épidémie : le formulaire redevient celui du code.
+
+```st
+AXPLReflexiveScenario run log.    "exécute les 8 étapes et renvoie le récit"
+AXPLReflexiveScenario demo.       "étapes 1 à 7, récit dans le Transcript, fenêtre ouverte au niveau Simple"
 ```
 
 ## Niveaux configurables
@@ -190,6 +245,7 @@ Le framework intègre nativement quatre dimensions autour d'une méta-descriptio
 - `AXPL-Core` — Moteurs A et Ψ, et la façade `AXPLFramework`
 - `AXPL-Examples` — objets métier de démonstration (`ClientHopital`, `Etudiant`) — **ne fait pas partie du framework** : il ne requiert qu'`AXPL-Descriptions`, jamais l'inverse
 - `AXPL-UI` — Interface L (desktop, Spec2)
+- `AXPL-Scenarios` — scénario réflexif exécutable (`AXPLReflexiveScenario`), au-dessus du framework et des exemples
 - `AXPL-Json` — Export JSON pur (aucune dépendance Spec2), pour un frontend web séparé
 - `AXPL-Web` *(groupe `web` uniquement)* — API HTTP ([Teapot](https://github.com/zeroflag/Teapot) + [NeoJSON](https://github.com/svenvc/NeoJSON)) exposant AXPL-Json et Ψ à un frontend externe (React, etc.)
 - `AXPL-Tests` — suite de tests unitaires (①, Ψ, ⑦, généricité, extensions SimpleRene, façade) — groupe `core`

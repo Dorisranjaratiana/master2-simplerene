@@ -40,6 +40,17 @@ AXPLFormApp class >> neutralHeight [
     ^ 130
 ]
 
+{ #category : 'instance creation' }
+AXPLFormApp class >> openOn: anAXPLFramework level: aLevel [
+	"Ouvre la fenêtre sur ce formulaire, au niveau donné."
+	| app |
+	app := self new.
+	app framework: anAXPLFramework.
+	app open.
+	app levelDropList selectItem: aLevel.
+	^ app
+]
+
 { #category : 'accessing' }
 AXPLFormApp class >> neutralMessage [
     ^ 'Choisissez un niveau pour afficher le formulaire.'
@@ -187,6 +198,14 @@ AXPLFormApp >> levelDropList: anObject [
 { #category : 'accessing' }
 AXPLFormApp >> framework [
 	^ framework
+]
+
+{ #category : 'accessing' }
+AXPLFormApp >> framework: anAXPLFramework [
+	"Affiche un formulaire déjà préparé (par exemple modifié par Ψ dans
+	un script ou un scénario) au lieu d'en créer un neuf."
+	framework := anAXPLFramework.
+	targetObject := anAXPLFramework targetObject
 ]
 
 { #category : 'accessing' }

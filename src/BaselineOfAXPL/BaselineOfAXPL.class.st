@@ -51,15 +51,18 @@ BaselineOfAXPL >> baseline: spec [
         pas du code AXPL — le framework ne dépend jamais d'eux, c'est
         l'inverse (AXPL-Examples ne requiert qu'AXPL-Descriptions, pas
         AXPL-Core, car descriptionForAXPL n'utilise que les descriptions,
-        jamais AXPLFormBuilder/AXPLReflexivityEngine/AXPLFramework)."
+        jamais AXPLFormBuilder/AXPLReflexivityEngine/AXPLFramework).
+        AXPL-Scenarios (scénario réflexif exécutable) utilise le framework
+        ET les exemples : il est donc à part, au-dessus des deux."
         spec
             package: 'AXPL-Descriptions' with: [ spec requires: #('SimpleRene') ];
             package: 'AXPL-Core' with: [ spec requires: #('AXPL-Descriptions') ];
             package: 'AXPL-Examples' with: [ spec requires: #('AXPL-Descriptions') ];
             package: 'AXPL-UI' with: [ spec requires: #('AXPL-Core') ];
             package: 'AXPL-Json' with: [ spec requires: #('AXPL-Core') ];
+            package: 'AXPL-Scenarios' with: [ spec requires: #('AXPL-UI' 'AXPL-Examples') ];
             package: 'AXPL-Web' with: [ spec requires: #('AXPL-Json' 'Teapot' 'NeoJSON') ];
-            package: 'AXPL-Tests' with: [ spec requires: #('AXPL-Core' 'AXPL-UI' 'AXPL-Json' 'AXPL-Examples') ];
+            package: 'AXPL-Tests' with: [ spec requires: #('AXPL-Core' 'AXPL-UI' 'AXPL-Json' 'AXPL-Examples' 'AXPL-Scenarios') ];
             package: 'AXPL-Web-Tests' with: [ spec requires: #('AXPL-Web' 'AXPL-Examples') ].
 
         "Groupes de chargement : un simple `load` (sans groupe précisé)
@@ -67,7 +70,7 @@ BaselineOfAXPL >> baseline: spec [
         le serveur HTTP ne sont tirés que par un `load: #('web')`
         explicite, au moment où on veut vraiment la partie web."
         spec
-            group: 'core' with: #('AXPL-UI' 'AXPL-Json' 'AXPL-Examples' 'AXPL-Tests');
+            group: 'core' with: #('AXPL-UI' 'AXPL-Json' 'AXPL-Examples' 'AXPL-Scenarios' 'AXPL-Tests');
             group: 'web' with: #('AXPL-Web' 'AXPL-Web-Tests');
             group: 'default' with: #('core') ]
 ]

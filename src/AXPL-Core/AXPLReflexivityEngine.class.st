@@ -1,27 +1,37 @@
 "
-""Moteur de réflexivité Ψ. Cœur de la contribution du framework AXPL.
-Implémente les relations ③④⑤⑥ et la traçabilité [t].
-③ readDescription: — lit une description par son label dans le metaContainer.
-④ relabelDescription:to: — modifie un label à l'exécution (intercession).
-⑤ updateExplanation:forLevel:with: / updateExplanation:with: — explication ②
-d'un champ, pour un niveau ou pour tous ; synchronise l'aide après intercession.
-⑥ Les créations acceptent aussi une explication (…level:explanation:) : un
-champ créé par Ψ a son aide dès la naissance, comme les champs déclarés.
-⑥ createField:type:level: / createSelectionField:options:level: / removeField: —
-crée ou retire un champ entier du metaContainer à l'exécution. Un champ créé
-n'est adossé à aucune variable d'instance : sa valeur vit dans le dictionnaire
-#properties de l'objet cible, via un SRPluggableAccessor.
-[t] traceLog — historique horodaté de toutes les intercessions (DateAndTime).
-↶ undoLast — annule la dernière intercession, puis la précédente, etc. (pile
-LIFO undoLog). Chaque intercession y range, avec le texte de sa trace, le
-bloc qui la défait sur l'objet description lui-même — pas sur son label,
-qui a pu changer depuis. Annuler dans l'ordre inverse remet exactement
-l'état antérieur. L'annulation est elle-même tracée (« Annulation : … »).
-💾 changes / replayChanges: — chaque intercession encore active est aussi
-décrite en DONNÉES (un Dictionary : #op, #label...), sans bloc : c'est ce
-que la sauvegarde STON enregistre, et ce qu'elle rejoue sur un
-metaContainer neuf pour retrouver le formulaire modifié.
-Instance unique créée dans targetObject: — jamais recréée entre les re-rendus.""
+Moteur de réflexivité Ψ d'AXPL : le formulaire peut s'observer et se
+modifier lui-même pendant que l'application tourne, sans recompiler ni
+redémarrer. Il agit sur le metaContainer (les descriptions SimpleRene du
+formulaire), jamais sur le code de la classe métier. Une instance par
+formulaire, créée par AXPLFramework (framework psiEngine).
+
+API, en trois familles (catégories de méthodes du même nom) :
+
+INTROSPECTION ③ — lire le méta-modèle
+  fields, labels                       les champs du formulaire
+  readDescription: aLabel              la description SimpleRene d'un champ (ou nil)
+  levelOf: / typeOf: aLabel            son niveau, sa classe de description
+  explanationOf: aLabel forLevel: aLvl son explication ② à ce niveau
+  psiCreatedLabels                     les champs créés à l'exécution par Ψ
+
+INTERCESSION ④⑤⑥⑨ — modifier le méta-modèle à l'exécution
+  createField:type:level:explanation:                  ⑥ nouveau champ (Texte, Nombre, Booléen, Date…)
+  createSelectionField:options:level:explanation:      ⑥ nouveau champ à choix
+  removeField:                                         ⑥ retirer un champ
+  relabelDescription:to:                               ④ renommer (les explications sont gardées)
+  setLevel:ofDescription:                              ⑨ changer le niveau qui voit le champ
+  updateExplanation:forLevel:with: / updateExplanation:with:   ⑤② changer l'explication
+Garanties : niveau inconnu refusé, label en double refusé, champ inconnu
+sans effet ; un champ créé n'a pas de variable d'instance, sa valeur vit
+dans le dictionnaire #properties de l'objet (SRPluggableAccessor).
+
+HISTOIRE [t] ↶ 💾 — garder la trace, annuler, rejouer
+  traceLog                             chaque intercession, horodatée (DateAndTime)
+  canUndo, lastUndoableChange, undoLast   annuler, de la plus récente à la plus ancienne
+  changes, replayChanges:              les intercessions actives en données (sans bloc),
+                                       pour la sauvegarde STON et leur rejeu
+
+Scénario complet : AXPLReflexiveScenario (package AXPL-Scenarios).
 "
 Class {
 	#name : 'AXPLReflexivityEngine',
@@ -178,7 +188,7 @@ AXPLReflexivityEngine >> metaContainer: aContainer [
     metaContainer := aContainer
 ]
 
-{ #category : 'querying' }
+{ #category : 'introspection' }
 AXPLReflexivityEngine >> readDescription: aLabel [
     ^ metaContainer children
         detect: [ :d | d label = aLabel ]
@@ -218,7 +228,7 @@ AXPLReflexivityEngine >> setLevel: aNewLevel ofDescription: aLabel [
         as: (Dictionary new at: #op put: #level; at: #label put: aLabel; at: #level put: aNewLevel; yourself).
 ]
 
-{ #category : 'accessing' }
+{ #category : 'history' }
 AXPLReflexivityEngine >> traceLog [
     ^ traceLog
 ]
@@ -272,19 +282,19 @@ AXPLReflexivityEngine >> record: aText undo: anUndoBlock as: aChange [
     undoLog add: { aText. anUndoBlock. aChange }
 ]
 
-{ #category : 'undo' }
+{ #category : 'history' }
 AXPLReflexivityEngine >> canUndo [
     ^ undoLog notEmpty
 ]
 
-{ #category : 'undo' }
+{ #category : 'history' }
 AXPLReflexivityEngine >> lastUndoableChange [
     "Texte de l'intercession qu'undoLast annulerait (nil s'il n'y en a pas),
     pour la montrer à l'utilisateur avant de confirmer."
     ^ undoLog ifEmpty: [ nil ] ifNotEmpty: [ undoLog last first ]
 ]
 
-{ #category : 'undo' }
+{ #category : 'history' }
 AXPLReflexivityEngine >> undoLast [
     "↶ Défait la dernière intercession encore active et renvoie son texte.
     L'annulation n'est pas elle-même annulable (pas de « rétablir »), mais
@@ -356,4 +366,41 @@ AXPLReflexivityEngine >> restoreTrace: aCollectionOfPairs [
     entrées produites par le rejeu : la trace reste celle d'origine."
     traceLog := (aCollectionOfPairs collect: [ :pair |
         Association key: pair first value: pair second ]) asOrderedCollection
+]
+
+{ #category : 'introspection' }
+AXPLReflexivityEngine >> explanationOf: aLabel forLevel: aLevel [
+    "② L'explication montrée à ce niveau, ou nil si le champ n'existe pas."
+    ^ (self readDescription: aLabel) ifNotNil: [ :desc | desc commentFor: aLevel ]
+]
+
+{ #category : 'introspection' }
+AXPLReflexivityEngine >> fields [
+    "Les descriptions du formulaire, dans l'ordre d'affichage."
+    ^ metaContainer children asArray
+]
+
+{ #category : 'introspection' }
+AXPLReflexivityEngine >> labels [
+    ^ self fields collect: [ :desc | desc label ]
+]
+
+{ #category : 'introspection' }
+AXPLReflexivityEngine >> levelOf: aLabel [
+    "① Le niveau à partir duquel le champ est visible, ou nil."
+    ^ (self readDescription: aLabel) ifNotNil: [ :desc | desc level ]
+]
+
+{ #category : 'introspection' }
+AXPLReflexivityEngine >> psiCreatedLabels [
+    "Les champs créés à l'exécution par Ψ (et non déclarés dans le code)."
+    ^ (self fields select: [ :desc |
+        desc axplExplanation notNil and: [ desc axplExplanation isPsiCreated ] ])
+            collect: [ :desc | desc label ]
+]
+
+{ #category : 'introspection' }
+AXPLReflexivityEngine >> typeOf: aLabel [
+    "La classe de description SimpleRene du champ, ou nil."
+    ^ (self readDescription: aLabel) ifNotNil: [ :desc | desc class ]
 ]
