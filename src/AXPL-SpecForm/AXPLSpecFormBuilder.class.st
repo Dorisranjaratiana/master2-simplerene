@@ -8,7 +8,10 @@ descriptions SimpleRene ; AXΨL n'y ajoute que ce qui lui est propre :
 - deux types que Spec-Form n'affiche pas encore : Date (il n'a pas de
   visitDateDescription:, le champ disparaissait) et mot de passe (affiché
   en clair, comme un texte ordinaire) ;
-- un texte nil ne fait pas planter le champ texte.
+- un texte nil ne fait pas planter le champ texte ;
+- le champ à choix utilise newDropList : le newDropDown de Spec-Form
+  (SpDropDownPresenter) n'a pas d'adaptateur Morphic dans Pharo 13
+  (« No binding for DropDownAdapter found » à l'ouverture de la fenêtre).
 Le filtrage par niveau ① est fait avant (AXPLSpecFormPresenter ne lui
 donne que les champs visibles).
 "
@@ -80,4 +83,22 @@ AXPLSpecFormBuilder >> visitPasswordDescription: aDescription [
 { #category : 'visiting' }
 AXPLSpecFormBuilder >> visitStringDescription: aDescription [
 	self textRowFor: aDescription password: false
+]
+
+{ #category : 'visiting' }
+AXPLSpecFormBuilder >> visitSingleOptionDescription: aDescription [
+	| dropList |
+	dropList := self newDropList.
+	dropList
+		startWithoutSelection;
+		items: aDescription options;
+		display: [ :each |
+			each
+				ifNil: [ '' ]
+				ifNotNil: [ aDescription reference toString: each ] ].
+	(self read: aDescription) ifNotNil: [ :value | dropList selectItem: value ].
+	dropList
+		enabled: aDescription isReadOnly not;
+		whenSelectedItemChangedDo: [ :each | self write: each description: aDescription ].
+	self appendWidget: dropList description: aDescription
 ]

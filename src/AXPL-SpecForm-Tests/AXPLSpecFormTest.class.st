@@ -97,3 +97,25 @@ AXPLSpecFormTest >> testLaSaisieNestEcriteQuApresValidation [
 	self assert: client nom equals: 'Ranjaratiana'.
 	self assert: client age equals: 30.
 ]
+
+{ #category : 'tests' }
+AXPLSpecFormTest >> testLaFenetreSOuvreAChaqueNiveau [
+	"Régression, constatée dans une vraie image : le newDropDown de
+	Spec-Form n'a pas d'adaptateur Morphic (« No binding for
+	DropDownAdapter found »). Les autres tests ne construisent que les
+	presenters ; celui-ci ouvre vraiment la fenêtre."
+	AXPLFormBuilder levels do: [ :lvl |
+		| window |
+		window := (framework specFormPresenterAt: lvl) open.
+		window close ]
+]
+
+{ #category : 'tests' }
+AXPLSpecFormTest >> testLeChampAChoixGardeSaValeur [
+	| sexe dropList |
+	sexe := framework psiEngine readDescription: 'Sexe'.
+	sexe write: 'Féminin' to: client.
+	dropList := (self widgetsOf: (framework specFormPresenterAt: #simple))
+		detect: [ :w | w isKindOf: SpDropListPresenter ].
+	self assert: dropList selectedItem equals: 'Féminin'.
+]
