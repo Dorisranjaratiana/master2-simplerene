@@ -200,7 +200,11 @@ Un chargement par défaut (`load.`) tire le groupe `default` = `core` = tout sau
 
 AXPL **dépend réellement** de [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (Ducasse et al., MIT License), déclaré comme projet externe dans `BaselineOfAXPL`. Le package `AXPL-Descriptions` n'y ajoute que ce que SimpleRene n'a pas nativement — les propriétés `level`/`level:` et `commentFor:` (explicabilité graduée par niveau) — via des méthodes d'extension sur `SRDescription`, plutôt qu'en dupliquant sa hiérarchie de classes.
 
-**Sur Spec-Form** : après recherche, aucun projet Pharo nommé « Spec-Form » n'existe (ni dans l'organisation [pharo-spec](https://github.com/pharo-spec), ni ailleurs sur GitHub). Le seul framework réel est [Spec2](https://github.com/pharo-spec/Spec) lui-même, livré nativement avec toute image Pharo — on ne le déclare donc pas en dépendance externe de baseline, comme n'importe quel autre projet qui utilise l'UI native de Pharo.
+**Spec2** est livré avec toute image Pharo : on ne le déclare pas en dépendance de baseline, comme tout projet qui utilise l'interface native de Pharo.
+
+**Sur Spec-Form** : [Spec-Form](https://github.com/pharo-spec/Spec-Form) (Esteban Lorenzano, organisation pharo-spec) est un prototype qui génère des formulaires Spec2 à partir des descriptions SimpleRene (`unObjet asFormPresenter`, mise en page en grille). AXPL **ne l'utilise pas encore** : son générateur desktop (`AXPLSpecVisitor`) est autonome — c'est la version présentée au jury. Ce qu'AXPL apporte en plus d'un formulaire généré (filtrage par niveau ①, explications graduées ②, réflexivité Ψ, trace, annulation, sauvegarde) ne dépend pas de la façon d'afficher les champs ; réutiliser Spec-Form pour l'affichage est une piste de travail. Deux points à régler pour cela :
+- Spec-Form affiche le `comment` d'une description comme texte d'aide, alors qu'AXPL y range aujourd'hui un Dictionary d'explications par niveau : les explications doivent passer dans les propriétés de la description (`propertyAt:`) ;
+- vérifier que Spec-Form (dernier commit : novembre 2023) se charge et fonctionne avec Pharo 13 et la version de SimpleRene épinglée par AXPL.
 
 ## Portage vers d'autres cibles
 
