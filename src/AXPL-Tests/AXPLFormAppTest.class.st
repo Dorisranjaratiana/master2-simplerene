@@ -38,7 +38,7 @@ AXPLFormAppTest >> testRenduParNiveau [
         visible := framework visibleFieldsAt: lvl.
         hidden := framework hiddenFieldsAt: lvl.
         self
-            assert: app formContainer layout presenters size
+            assert: app displayedRowCount
             equals: visible size + (hidden isEmpty ifTrue: [ 0 ] ifFalse: [ 1 ]).
         self
             assert: app psiButton isEnabled
@@ -141,7 +141,7 @@ AXPLFormAppTest >> testChoisirUnNiveauAfficheDirectementLeFormulaire [
     "Plus de bouton Rafraîchir : la sélection suffit."
     app levelDropList selectItem: #base.
     self
-        assert: app formContainer layout presenters size
+        assert: app displayedRowCount
         equals: ((AXPLFramework for: client) visibleFieldsAt: #base) size + 1.
     self assert: (app bodyContainer layout presenters includes: app actionBar).
 ]
@@ -168,7 +168,7 @@ AXPLFormAppTest >> testRevenirDExpertASimpleRepartDUnFormulaireNeuf [
     app levelDropList selectItem: #simple.
     self deny: app formContainer == conteneurExpert.
     self
-        assert: app formContainer layout presenters size
+        assert: app displayedRowCount
         equals: ((AXPLFramework for: client) visibleFieldsAt: #simple) size + 1.
 ]
 
@@ -187,7 +187,7 @@ AXPLFormAppTest >> testSaisieRefuseeBloqueLEnregistrement [
     valeur que l'objet n'a pas."
     | ageInput |
     app levelDropList selectItem: #simple.
-    ageInput := (app formContainer layout presenters at: 3) presenters last.
+    ageInput := app formPresenter widgetFor: 'Âge'.
     ageInput number: -5.
     self assert: (app pendingErrors includesKey: 'Âge').
     self assert: (app statusLabel label includesSubstring: '⚠').
@@ -233,13 +233,13 @@ AXPLFormAppTest >> testAnnulerLaDerniereModificationPsiDepuisLaFenetre [
     "↶ Le formulaire est redessiné : le champ créé par Ψ disparaît."
     | attendu annule |
     app levelDropList selectItem: #expert.
-    attendu := app formContainer layout presenters size.
+    attendu := app displayedRowCount.
     app psiEngine createField: 'Note interne' type: SRStringDescription level: #simple.
     app updateInterface.
-    self assert: app formContainer layout presenters size equals: attendu + 1.
+    self assert: app displayedRowCount equals: attendu + 1.
     annule := app undoLastPsiChange.
     self assert: annule equals: 'Création : Note interne'.
-    self assert: app formContainer layout presenters size equals: attendu.
+    self assert: app displayedRowCount equals: attendu.
 ]
 
 { #category : 'tests - dossiers' }
@@ -258,7 +258,7 @@ AXPLFormAppTest >> testEnregistrerPuisOuvrirUnDossier [
     self assert: app currentDossierName equals: 'patient1'.
     "Le formulaire du niveau courant est redessiné avec le champ Ψ."
     self
-        assert: app formContainer layout presenters size
+        assert: app displayedRowCount
         equals: (app framework visibleFieldsAt: #simple) size + 1.
     self assert: (app statusLabel label includesSubstring: 'patient1').
 ]
@@ -280,4 +280,16 @@ AXPLFormAppTest >> testNomDeDossierInvalideRefuse [
     self should: [ app saveDossierAs: '../ailleurs' ] raise: Error.
     self should: [ app saveDossierAs: '   ' ] raise: Error.
     self assert: app dossierNames isEmpty.
+]
+
+{ #category : 'tests' }
+AXPLFormAppTest >> testLeFormulaireEstDessineParSpecForm [
+	"Le formulaire de la fenêtre est un SFContainerPresenter de Spec-Form
+	(pharo-spec/Spec-Form), alimenté par AXΨL au niveau choisi."
+	app levelDropList selectItem: #base.
+	self assert: (app formPresenter isKindOf: SFContainerPresenter).
+	self assert: app formPresenter level equals: #base.
+	self assert: (app formContainer layout presenters includes: app formPresenter).
+	app resetInterface.
+	self assert: app formPresenter isNil.
 ]

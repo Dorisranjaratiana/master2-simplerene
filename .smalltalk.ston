@@ -2,7 +2,7 @@ SmalltalkCISpec {
   #loading : [
     SCIMetacelloLoadSpec {
       #baseline : 'AXPL',
-      #load : [ 'core', 'web', 'specform' ],
+      #load : [ 'core', 'web' ],
       #onConflict : #useIncoming,
       #onUpgrade : #useIncoming,
       #ignoreImage : true,

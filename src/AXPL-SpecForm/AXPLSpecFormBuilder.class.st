@@ -12,6 +12,9 @@ descriptions SimpleRene ; AXΨL n'y ajoute que ce qui lui est propre :
 - le champ à choix utilise newDropList : le newDropDown de Spec-Form
   (SpDropDownPresenter) n'a pas d'adaptateur Morphic dans Pharo 13
   (« No binding for DropDownAdapter found » à l'ouverture de la fenêtre).
+Chaque saisie est validée par SimpleRene avant d'être écrite (write:description:) :
+une valeur refusée n'est pas écrite, l'infobulle du champ affiche ⚠ et le
+message, et le presenter prévient l'application.
 Le filtrage par niveau ① est fait avant (AXPLSpecFormPresenter ne lui
 donne que les champs visibles).
 "
@@ -19,7 +22,8 @@ Class {
 	#name : 'AXPLSpecFormBuilder',
 	#superclass : 'SFGridPresenterBuilder',
 	#instVars : [
-		'level'
+		'level',
+		'widgets'
 	],
 	#category : 'AXPL-SpecForm',
 	#package : 'AXPL-SpecForm'
@@ -29,8 +33,8 @@ Class {
 AXPLSpecFormBuilder >> appendWidget: aWidget description: aDescription [
 	"SpDatePresenter (composite, pas un widget simple) n'a pas d'infobulle :
 	vérifié par la CI, help: y lève doesNotUnderstand."
-	(aWidget respondsTo: #help:) ifTrue: [
-		aWidget help: (aDescription commentFor: level) ].
+	self widgets at: aDescription put: aWidget.
+	self mark: aWidget for: aDescription with: nil.
 	builder
 		add: (self labelTextFor: aDescription);
 		add: aWidget;
@@ -103,4 +107,63 @@ AXPLSpecFormBuilder >> visitSingleOptionDescription: aDescription [
 		enabled: aDescription isReadOnly not;
 		whenSelectedItemChangedDo: [ :each | self write: each description: aDescription ].
 	self appendWidget: dropList description: aDescription
+]
+
+{ #category : 'private' }
+AXPLSpecFormBuilder >> mark: aWidget for: aDescription with: aMessageOrNil [
+	"② L'infobulle donne l'explication du niveau ; tant qu'une saisie est
+	refusée, elle donne le message de SimpleRene."
+	(aWidget respondsTo: #help:) ifFalse: [ ^ self ].
+	aWidget help: (aMessageOrNil
+		ifNil: [ aDescription commentFor: level ]
+		ifNotNil: [ '⚠ ' , aMessageOrNil asString ])
+]
+
+{ #category : 'visiting' }
+AXPLSpecFormBuilder >> visitBooleanDescription: aDescription [
+	"Comme Spec-Form, mais une valeur nil est une case décochée."
+	| checkbox |
+	checkbox := self newCheckBox
+		state: (self read: aDescription) == true;
+		enabled: aDescription isReadOnly not;
+		whenChangedDo: [ :aValue | self write: aValue description: aDescription ];
+		yourself.
+	self appendWidget: checkbox description: aDescription
+]
+
+{ #category : 'visiting' }
+AXPLSpecFormBuilder >> visitContainer: aContainer [
+	"Mêmes espacements que la fenêtre AXΨL : 33 pixels par ligne, sur
+	lesquels est calculée la hauteur de la fenêtre (AXPLFormApp)."
+	super visitContainer: aContainer.
+	gridLayout
+		rowSpacing: 8;
+		columnSpacing: 15
+]
+
+{ #category : 'accessing' }
+AXPLSpecFormBuilder >> widgetFor: aLabel [
+	^ self widgets keys
+		detect: [ :each | each label = aLabel ]
+		ifFound: [ :description | self widgets at: description ]
+		ifNone: [ nil ]
+]
+
+{ #category : 'accessing' }
+AXPLSpecFormBuilder >> widgets [
+	"description → widget de saisie"
+	^ widgets ifNil: [ widgets := IdentityDictionary new ]
+]
+
+{ #category : 'private' }
+AXPLSpecFormBuilder >> write: anObject description: aDescription [
+	"Validée avant d'être écrite (règles de SimpleRene : requis, type,
+	conditions) ; une valeur refusée n'est pas écrite."
+	| message |
+	message := aDescription validationMessageFor: anObject.
+	message ifNil: [ super write: anObject description: aDescription ].
+	(self widgets at: aDescription ifAbsent: [ nil ]) ifNotNil: [ :widget |
+		self mark: widget for: aDescription with: message ].
+	presenter notifyValidationOf: aDescription message: message.
+	^ message
 ]

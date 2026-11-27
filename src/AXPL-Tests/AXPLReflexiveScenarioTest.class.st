@@ -76,7 +76,7 @@ AXPLReflexiveScenarioTest >> testLaFenetreSOuvreSurLeFormulaireModifie [
     app levelDropList selectItem: #simple.
     self assert: app targetObject identicalTo: scenario framework targetObject.
     self
-        assert: app formContainer layout presenters size
+        assert: app displayedRowCount
         equals: (scenario framework visibleFieldsAt: #simple) size + 1.
 ]
 

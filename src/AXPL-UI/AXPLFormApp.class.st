@@ -9,7 +9,10 @@ Slots principaux :
   - traceButton : affiche le log horodaté [t] au niveau le plus privilégié
   - openButton / Enregistrer : 💾 dossiers STON (objet + modifications Ψ)
     rangés dans dossiersDirectory (par défaut <image>/axpl-dossiers)
-updateInterface : méthode centrale qui orchestre ①②⑦⑧⑨⑩.
+updateInterface : méthode centrale qui orchestre ①②⑦⑧⑨⑩. Le formulaire
+lui-même est dessiné par Spec-Form (AXPLSpecFormPresenter, package
+AXPL-SpecForm), sous la liste des niveaux ; AXΨL lui donne les champs
+visibles ①, l'explication de chaque champ ② et la validation des saisies.
 targetObject: : point d'entrée — crée la façade puis déclenche le rendu.""
 "
 Class {
@@ -28,7 +31,8 @@ Class {
 		'pendingErrors',
 		'openButton',
 		'dossiersDirectory',
-		'currentDossierName'
+		'currentDossierName',
+		'formPresenter'
 	],
 	#category : 'AXPL-UI',
 	#package : 'AXPL-UI'
@@ -196,6 +200,21 @@ AXPLFormApp >> levelDropList: anObject [
 ]
 
 { #category : 'accessing' }
+AXPLFormApp >> displayedRowCount [
+	"Lignes du formulaire affiché : une par champ (la grille Spec-Form
+	alterne label et widget), plus le bouton des champs masqués s'il y en a."
+	formPresenter ifNil: [ ^ 0 ].
+	^ (formPresenter layout presenters size // 2)
+		+ (formContainer layout presenters size - 1)
+]
+
+{ #category : 'accessing' }
+AXPLFormApp >> formPresenter [
+	"Le formulaire Spec-Form du niveau affiché (nil sur l'écran neutre)."
+	^ formPresenter
+]
+
+{ #category : 'accessing' }
 AXPLFormApp >> framework [
 	^ framework
 ]
@@ -248,6 +267,7 @@ AXPLFormApp >> resetInterface [
 { #category : 'updating' }
 AXPLFormApp >> showNeutralState [
     self window ifNotNil: [ :w | w resize: 500 @ self class neutralHeight ].
+    formPresenter := nil.
     formContainer layout: SpBoxLayout newVertical.
     bodyContainer layout: SpBoxLayout newVertical.
     statusLabel label: self class neutralMessage.
@@ -635,7 +655,7 @@ AXPLFormApp >> traceButton: anObject [
 
 { #category : 'updating' }
 AXPLFormApp >> updateInterface [
-    | level visibleDescs hidden visitor newLayout |
+    | level visibleDescs hidden newLayout |
     targetObject ifNil: [ ^ self ].
     level := levelDropList selectedItem.
     level ifNil: [ ^ self showNeutralState ].
@@ -663,12 +683,17 @@ AXPLFormApp >> updateInterface [
                 enabled: false;
                 action: [ ] ].
 
-    "⑦ Génération widgets (L)"
-    visitor := (AXPLSpecVisitor on: targetObject level: level)
-        presenter: self;
-        whenValidationChangedDo: [ :desc :message | self validationOf: desc changedTo: message ];
+    "⑦ Génération des widgets (L) par Spec-Form : la grille label / champ
+    est dessinée par Spec-Form (pharo-spec/Spec-Form), alimentée par AXΨL."
+    formPresenter := AXPLSpecFormPresenter
+        on: framework
+        level: level
+        owner: self
+        validationHandler: [ :desc :message | self validationOf: desc changedTo: message ].
+    newLayout := SpBoxLayout newVertical
+        spacing: 8;
+        add: formPresenter expand: false;
         yourself.
-    newLayout := visitor visit: visibleDescs.
 
     "② Champs masqués avec explication (X) — un seul bouton groupé plutôt
     qu'un par champ, pour ne pas noyer les champs visibles."

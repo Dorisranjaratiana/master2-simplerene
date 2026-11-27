@@ -78,24 +78,36 @@ AXPLSpecFormTest >> testUnChampCreeParPsiApparait [
 ]
 
 { #category : 'tests' }
-AXPLSpecFormTest >> testLaSaisieNestEcriteQuApresValidation [
-	"Le memento de SimpleRene garde la saisie ; save valide puis écrit."
-	| presenter memento nom prenom age |
-	presenter := framework specFormPresenterAt: #simple.
-	memento := presenter memento.
-	nom := framework psiEngine readDescription: 'Nom'.
-	prenom := framework psiEngine readDescription: 'Prénom'.
+AXPLSpecFormTest >> testChaqueSaisieEstValideeAvantDEtreEcrite [
+	"Une valeur refusée par SimpleRene n'est pas écrite : l'infobulle du
+	champ l'indique et l'application est prévenue ; une valeur correcte
+	est écrite tout de suite et l'explication revient."
+	| refus presenter ageInput age |
+	refus := Dictionary new.
+	presenter := AXPLSpecFormPresenter
+		on: framework
+		level: #simple
+		owner: nil
+		validationHandler: [ :desc :message | refus at: desc label put: message ].
 	age := framework psiEngine readDescription: 'Âge'.
-	memento simpleReneWrite: 'Ranjaratiana' using: nom.
-	memento simpleReneWrite: 'Doris' using: prenom.
-	memento simpleReneWrite: -5 using: age.
-	self assert: client nom equals: ''.
-	self assert: presenter save notNil.
-	self assert: client nom equals: ''.
-	memento simpleReneWrite: 30 using: age.
-	self assert: presenter save isNil.
-	self assert: client nom equals: 'Ranjaratiana'.
+	ageInput := presenter widgetFor: 'Âge'.
+	ageInput number: -5.
+	self assert: client age equals: 0.
+	self assert: (refus at: 'Âge') notNil.
+	self assert: (ageInput help beginsWith: '⚠').
+	ageInput number: 30.
 	self assert: client age equals: 30.
+	self assert: (refus at: 'Âge') isNil.
+	self assert: ageInput help equals: (age commentFor: #simple).
+]
+
+{ #category : 'tests' }
+AXPLSpecFormTest >> testSaveVerifieToutLeFormulaire [
+	| presenter |
+	presenter := framework specFormPresenterAt: #simple.
+	self assert: presenter save notNil.
+	client nom: 'Ranjaratiana'; prenom: 'Doris'; age: 30.
+	self assert: presenter save isNil.
 ]
 
 { #category : 'tests' }

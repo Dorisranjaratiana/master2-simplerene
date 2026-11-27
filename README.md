@@ -6,7 +6,7 @@ Framework Low-Code pour le pilotage natif des interfaces adaptatives.
 
 Version de **développement** (branche `integration-simplerene`) : les dernières améliorations, peut changer à tout moment. La version stable figée **v1.0.0** se trouve dans le dépôt `AXPL-Pharo` (voir son README).
 
-Un chargement simple reste **100% côté Pharo** : SimpleRene, les moteurs ①Ψ, l'UI desktop (Spec2) et l'export JSON, sans toucher à Teapot/NeoJSON ni au serveur HTTP.
+Un chargement simple reste **100% côté Pharo** : SimpleRene, les moteurs ①Ψ, l'UI desktop (Spec2, formulaires dessinés par Spec-Form) et l'export JSON, sans toucher à Teapot/NeoJSON ni au serveur HTTP.
 
 ```st
 Metacello new
@@ -39,8 +39,8 @@ Metacello new
 - ② explications rangées dans les propriétés de la description (`propertyAt: #axplExplanation`) par un décorateur `AXPLExplanation`, au lieu du `comment` de SimpleRene (qui reste une aide String, affichable par Spec-Form) ; ancien format toujours lu
 - Ψ : API documentée en trois familles (introspection, intercession, histoire), introspection complétée (`fields`, `labels`, `levelOf:`, `typeOf:`, `explanationOf:forLevel:`, `psiCreatedLabels`)
 - scénario réflexif exécutable `AXPLReflexiveScenario` (l'épidémie), `AXPLFormApp openOn:level:`
-- Spec-Form (proposé par S. Ducasse) : groupe optionnel `specform`, formulaires AXΨL dessinés par Spec-Form (`AXPLFramework >> specFormPresenterAt:`), quatre manques de Spec-Form sous Pharo 13 comblés
-- 156 tests
+- **Spec-Form** (proposé par S. Ducasse) : dépendance de la baseline ; le formulaire de `AXPLFormApp` est dessiné par Spec-Form (`AXPLSpecFormPresenter`), avec niveaux ①, explications ② et validation de chaque saisie ; quatre manques de Spec-Form sous Pharo 13 comblés (`AXPLSpecFormBuilder`)
+- 158 tests
 
 **v1.0.0** — première version stable :
 - dépendance réelle à SimpleRene (extensions, jamais de réimplémentation), Teapot et NeoJSON — toutes épinglées sur un commit
@@ -245,15 +245,15 @@ Le framework intègre nativement quatre dimensions autour d'une méta-descriptio
 - `AXPL-Descriptions` — Extension du vrai [SimpleRene](https://github.com/pharo-contributions/SimpleRene) (niveau #simple/#base/#expert, explicabilité graduée)
 - `AXPL-Core` — Moteurs A et Ψ, et la façade `AXPLFramework`
 - `AXPL-Examples` — objets métier de démonstration (`ClientHopital`, `Etudiant`) — **ne fait pas partie du framework** : il ne requiert qu'`AXPL-Descriptions`, jamais l'inverse
-- `AXPL-UI` — Interface L (desktop, Spec2)
+- `AXPL-UI` — Interface L (desktop, Spec2) : la fenêtre `AXPLFormApp`, dont le formulaire est dessiné par Spec-Form
 - `AXPL-Scenarios` — scénario réflexif exécutable (`AXPLReflexiveScenario`), au-dessus du framework et des exemples
 - `AXPL-Json` — Export JSON pur (aucune dépendance Spec2), pour un frontend web séparé
 - `AXPL-Web` *(groupe `web` uniquement)* — API HTTP ([Teapot](https://github.com/zeroflag/Teapot) + [NeoJSON](https://github.com/svenvc/NeoJSON)) exposant AXPL-Json et Ψ à un frontend externe (React, etc.)
 - `AXPL-Tests` — suite de tests unitaires (①, Ψ, ⑦, généricité, extensions SimpleRene, façade) — groupe `core`
 - `AXPL-Web-Tests` *(groupe `web` uniquement)* — tests du serveur HTTP, seul package avec `AXPL-Web` à dépendre de Teapot/NeoJSON
-- `AXPL-SpecForm`, `AXPL-SpecForm-Tests` *(groupe `specform` uniquement)* — formulaires AXΨL dessinés par [Spec-Form](https://github.com/pharo-spec/Spec-Form) ; seuls packages à dépendre de Spec-Form
+- `AXPL-SpecForm`, `AXPL-SpecForm-Tests` — adaptateur [Spec-Form](https://github.com/pharo-spec/Spec-Form) : formulaires AXΨL dessinés par Spec-Form (utilisé par `AXPL-UI`)
 
-Un chargement par défaut (`load.`) tire le groupe `default` = `core` = tout sauf les groupes optionnels `web` et `specform`. C'est volontaire : le framework reste utilisable et testable 100% côté Pharo sans jamais toucher à une dépendance web, celle-ci n'étant chargée qu'à la demande (`load: #('web')`).
+Un chargement par défaut (`load.`) tire le groupe `default` = `core` = tout sauf le groupe optionnel `web`. C'est volontaire : le framework reste utilisable et testable 100% côté Pharo sans jamais toucher à une dépendance web, celle-ci n'étant chargée qu'à la demande (`load: #('web')`).
 
 ## Dépendance
 
@@ -261,19 +261,13 @@ AXPL **dépend réellement** de [SimpleRene](https://github.com/pharo-contributi
 
 **Spec2** est livré avec toute image Pharo : on ne le déclare pas en dépendance de baseline, comme tout projet qui utilise l'interface native de Pharo.
 
-**Spec-Form** : [Spec-Form](https://github.com/pharo-spec/Spec-Form) (Esteban Lorenzano, organisation pharo-spec) génère des formulaires Spec2 à partir des descriptions SimpleRene. AXΨL peut **s'en servir pour dessiner ses formulaires** (groupe optionnel `specform`) : Spec-Form dessine la grille label / champ, AXΨL lui donne les champs visibles au niveau ① (champs Ψ compris) et l'aide de chaque champ ②, et la saisie passe par le memento de SimpleRene (rien n'est écrit dans l'objet avant `save`, qui valide d'abord).
+**Spec-Form** : AXΨL **dépend de** [Spec-Form](https://github.com/pharo-spec/Spec-Form) (Esteban Lorenzano, organisation pharo-spec), le générateur de formulaires Spec2 construit sur SimpleRene, et **s'en sert pour dessiner ses formulaires** : la fenêtre `AXPLFormApp` affiche un `AXPLSpecFormPresenter` (sous-classe du `SFContainerPresenter` de Spec-Form). Spec-Form dessine la grille label / champ ; AXΨL lui donne les champs visibles au niveau ① (champs Ψ compris), l'aide de chaque champ ② et valide chaque saisie avec les règles de SimpleRene avant de l'écrire (memento direct `SRStraightMemento` ; une saisie refusée n'est pas écrite et son champ l'indique). Le formulaire Spec-Form s'utilise aussi seul :
 
 ```st
-Metacello new
-    baseline: 'AXPL';
-    repository: 'github://Dorisranjaratiana/master2-simplerene:integration-simplerene/src';
-    onConflict: [ :ex | ex useIncoming ];
-    load: #('core' 'specform').
-
 ((AXPLFramework for: ClientHopital new) specFormPresenterAt: #expert) open.
 ```
 
-Spec-Form est chargé comme **package** épinglé sur un commit, sans sa baseline : celle-ci demande SimpleRene sans version, ce qui remplacerait la version épinglée par AXΨL. La fenêtre complète (boutons, menu Ψ, trace, dossiers) reste `AXPLFormApp`, dessinée par `AXPLSpecVisitor`.
+Spec-Form est chargé comme **package** épinglé sur un commit, sans sa baseline : celle-ci demande SimpleRene sans version, ce qui remplacerait la version épinglée par AXΨL. `AXPLSpecVisitor` reste disponible comme générateur Spec2 sans Spec-Form.
 
 Avec Pharo 13, Spec-Form (dernier commit : novembre 2023) a quatre manques, que `AXPLSpecFormBuilder` comble — tous constatés en CI ou dans une vraie image :
 - pas de champ **Date** (pas de `visitDateDescription:`) : le champ disparaissait du formulaire ;
