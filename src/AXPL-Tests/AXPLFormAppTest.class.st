@@ -329,8 +329,7 @@ AXPLFormAppTest >> testLInfobulleEstSurLeWidgetMorphicDuLabel [
 			label := app formPresenter labelFor: 'Nom'.
 			morph := label adapter widget.
 			self
-				assert: morph balloonText asString
-				equals: (nom commentFor: lvl)
+				assert: morph balloonText asString = (nom commentFor: lvl)
 				description: lvl asString , ' : morph ' , morph class name , ' balloonText = '
 					, morph balloonText printString ] ]
 		ensure: [ window close ]
